@@ -143,6 +143,7 @@ function tomauO(o, ten) {
 const KEY_TV = "404_bang_chien_members";
 const KEY = "404_bang_chien_slots";
 const KEY_TIEUDE = "404_bang_chien_titles";
+const KEY_ROSTER = "404_bang_chien_roster";
 
 // ---------- Kết nối Supabase (dữ liệu dùng chung cho mọi máy) ----------
 const SUPABASE_URL = "https://xrhauinnqmmynfftmdqb.supabase.co";
@@ -311,6 +312,27 @@ let duLieu = JSON.parse(localStorage.getItem(KEY) || "{}");
 let luuTieuDe = {};
 try { luuTieuDe = JSON.parse(localStorage.getItem(KEY_TIEUDE) || "{}") || {}; } catch (e) { luuTieuDe = {}; }
 
+// Danh sách TOÀN BỘ thành viên trong bang (khác với DANH_SACH = người đăng ký trận bang chiến)
+function chuanRoster(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr
+        .filter(m => m && typeof m.ten === "string" && m.ten.trim() && PHAI.includes(m.phai))
+        .map(m => ({ ten: m.ten.trim(), phai: m.phai }));
+}
+let ROSTER = [];
+try { ROSTER = chuanRoster(JSON.parse(localStorage.getItem(KEY_ROSTER) || "[]")); } catch (e) { ROSTER = []; }
+
+function luuRoster() {
+    localStorage.setItem(KEY_ROSTER, JSON.stringify(ROSTER));
+    dayLen("roster", () => ROSTER);
+}
+
+// Bỏ dấu tiếng Việt để tìm kiếm: gõ "diep" vẫn ra "Diệp"
+function boDau(t) {
+    return String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/\s+/g, "");
+}
+
 // 2. Giao diện (CSS cho các cửa sổ)
 function themGiaoDien() {
     if (document.getElementById("chon-phai-style")) return;
@@ -430,6 +452,27 @@ function themGiaoDien() {
         td.p-thantuong { background: #4f78cf; --chu-o: #ffffff; }
         td.p-thiety    { background: #ffe39a; --chu-o: #4a3d12; }
         td.p-huyetha   { background: #ee9a9e; --chu-o: #4a1f23; }
+
+        /* --- Cửa sổ Quản lý thành viên --- */
+        .ql-hop { width: 720px; }
+        .ql-thanh { display: flex; gap: 8px; margin: 14px 0 10px; }
+        .ql-tim { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid #ead8e2; border-radius: 9px; font: inherit; font-size: 14px; background: white; }
+        .ql-tim:focus { outline: 2px solid #e85b83; outline-offset: -1px; }
+        .ql-bang-wrap { max-height: 46vh; overflow: auto; border: 1px solid #f0dfe8; border-radius: 12px; background: white; }
+        .ql-bang { width: 100%; table-layout: auto; border-collapse: collapse; font-size: 14px; }
+        .ql-bang th, .ql-bang td { border: 0; border-top: 1px solid #f4e6ee; text-align: left; height: auto; padding: 9px 12px; font-size: 14px; font-weight: 600; color: #463444; background: transparent; }
+        .ql-bang thead th { position: sticky; top: 0; z-index: 1; border-top: 0; background: #fff0f6; color: #b83e70; font-size: 13px; font-weight: 800; }
+        .ql-bang th.ql-cot-thao-tac, .ql-bang td.ql-thao-tac { width: 1%; white-space: nowrap; text-align: right; }
+        .ql-sap { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 800; color: inherit; cursor: pointer; }
+        .ql-sap:hover { text-decoration: underline; }
+        .ql-loc, .ql-sua-phai { padding: 6px 8px; border: 1px solid #ead8e2; border-radius: 8px; background: white; font: inherit; font-size: 13px; color: #463444; max-width: 100%; }
+        .ql-sua-ten { width: 100%; min-width: 120px; padding: 7px 9px; border: 1px solid #e85b83; border-radius: 8px; font: inherit; font-size: 14px; }
+        .ql-chip { display: inline-block; padding: 3px 11px; border-radius: 999px; background: var(--mau, #ffe2f2); color: var(--chu, #463444); font-size: 12px; font-weight: 700; }
+        .ql-bang td.ql-rong { text-align: center; color: #8b8191; font-weight: 400; padding: 22px 12px; }
+        .ql-nut { border: 1px solid #f0c9d9; background: #fff0f5; color: #b83e70; border-radius: 7px; padding: 5px 10px; font-size: 12px; cursor: pointer; margin-left: 4px; }
+        .ql-nut:hover { background: #f8c5d9; }
+        .ql-nut.nguy { background: #ffe9ec; color: #b3263f; border-color: #f3b5bf; }
+        .ql-nut.chinh { background: #e85b83; color: white; border-color: #e85b83; }
 
         /* --- Cửa sổ Thành Viên --- */
         .tv-hop { width: 920px; }
@@ -714,6 +757,301 @@ function moBangChon(o) {
     hop.append(tieuDe, moTa, luoi, ketQua, hangDong);
     nen.appendChild(hop);
     document.body.appendChild(nen);
+}
+
+// 6b. Cửa sổ Quản lý thành viên (toàn bộ thành viên bang, nhập thủ công)
+function moQuanLy() {
+    if (!laAdmin()) return;
+    document.querySelector(".chon-phai-nen")?.remove();
+
+    const nen = document.createElement("div");
+    nen.className = "chon-phai-nen";
+    nen.addEventListener("click", e => { if (e.target === nen) nen.remove(); });
+
+    const hop = document.createElement("div");
+    hop.className = "chon-phai-hop ql-hop";
+    hop.setAttribute("role", "dialog");
+    hop.setAttribute("aria-label", "Quản lý thành viên");
+
+    const dau = document.createElement("div");
+    dau.className = "tv-dau";
+    const tieuDe = document.createElement("h2");
+    tieuDe.textContent = "Quản lý thành viên";
+    const tong = document.createElement("span");
+    tong.className = "tv-tong";
+    dau.append(tieuDe, tong);
+
+    const moTa = document.createElement("p");
+    moTa.className = "chon-phai-mo-ta";
+    moTa.textContent = "Danh sách toàn bộ thành viên hiện có trong bang. Nhập thủ công, tìm theo tên và lọc theo phái.";
+
+    const loi = document.createElement("p");
+    loi.className = "tv-loi";
+    loi.setAttribute("role", "status");
+    function bao(chu, laLoi) {
+        loi.style.color = laLoi ? "#c0334f" : "#2f7a4b";
+        loi.textContent = chu;
+    }
+
+    // --- Thêm thành viên ---
+    const them = document.createElement("details");
+    them.className = "tv-nhap";
+    them.open = true;
+    const themTieuDe = document.createElement("summary");
+    themTieuDe.textContent = "Thêm thành viên";
+    const themHang = document.createElement("div");
+    themHang.className = "tv-tc-hang";
+    const themTen = document.createElement("textarea");
+    themTen.className = "tv-tc-ten";
+    themTen.rows = 2;
+    themTen.placeholder = "Tên thành viên (nhiều tên: mỗi tên một dòng hoặc cách nhau bằng dấu phẩy)";
+    themTen.setAttribute("aria-label", "Tên thành viên");
+    const themPhai = document.createElement("select");
+    themPhai.setAttribute("aria-label", "Phái");
+    PHAI.forEach(p => {
+        const op = document.createElement("option");
+        op.value = p;
+        op.textContent = p;
+        themPhai.appendChild(op);
+    });
+    const themNut = document.createElement("button");
+    themNut.type = "button";
+    themNut.textContent = "Thêm";
+    themHang.append(themTen, themPhai, themNut);
+    them.append(themTieuDe, themHang);
+
+    // --- Tìm kiếm ---
+    const thanh = document.createElement("div");
+    thanh.className = "ql-thanh";
+    const tim = document.createElement("input");
+    tim.type = "search";
+    tim.className = "ql-tim";
+    tim.placeholder = "Tìm theo tên thành viên…";
+    tim.setAttribute("aria-label", "Tìm theo tên thành viên");
+    thanh.appendChild(tim);
+
+    // --- Bảng ---
+    const wrap = document.createElement("div");
+    wrap.className = "ql-bang-wrap";
+    const bang = document.createElement("table");
+    bang.className = "ql-bang";
+    const thead = document.createElement("thead");
+    const hangDau = document.createElement("tr");
+
+    const thTen = document.createElement("th");
+    const nutSap = document.createElement("button");
+    nutSap.type = "button";
+    nutSap.className = "ql-sap";
+    thTen.appendChild(nutSap);
+
+    const thPhai = document.createElement("th");
+    const loc = document.createElement("select");
+    loc.className = "ql-loc";
+    loc.setAttribute("aria-label", "Lọc theo phái");
+    const opTatCa = document.createElement("option");
+    opTatCa.value = "";
+    loc.appendChild(opTatCa);
+    PHAI.forEach(p => {
+        const op = document.createElement("option");
+        op.value = p;
+        loc.appendChild(op);
+    });
+    thPhai.appendChild(loc);
+
+    const thThao = document.createElement("th");
+    thThao.className = "ql-cot-thao-tac";
+    const nhanThao = document.createElement("span");
+    nhanThao.textContent = "Thao tác";
+    nhanThao.className = "ql-sr";
+    nhanThao.style.cssText = "position:absolute;left:-9999px";
+    thThao.appendChild(nhanThao);
+
+    hangDau.append(thTen, thPhai, thThao);
+    thead.appendChild(hangDau);
+    const tbody = document.createElement("tbody");
+    bang.append(thead, tbody);
+    wrap.appendChild(bang);
+
+    let sapXep = "asc";
+    let dangSua = null;
+
+    function capNhatLoc() {
+        const dem = {};
+        PHAI.forEach(p => { dem[p] = 0; });
+        ROSTER.forEach(m => { dem[m.phai]++; });
+        loc.options[0].textContent = "Phái: tất cả (" + ROSTER.length + ")";
+        PHAI.forEach((p, i) => { loc.options[i + 1].textContent = p + " (" + dem[p] + ")"; });
+    }
+
+    function luuSua(m, tenMoi, phaiMoi) {
+        tenMoi = tenMoi.replace(/\s+/g, " ").trim();
+        if (!tenMoi) { bao("Tên không được để trống.", true); return; }
+        const k = chuanHoa(tenMoi);
+        const trung = ROSTER.find(x => x !== m && chuanHoa(x.ten) === k);
+        if (trung) { bao("\"" + tenMoi + "\" đã có trong bang (phái " + trung.phai + ").", true); return; }
+        m.ten = tenMoi;
+        m.phai = phaiMoi;
+        dangSua = null;
+        luuRoster();
+        bao("Đã cập nhật thành viên.", false);
+        veBang();
+    }
+
+    function veBang() {
+        nutSap.textContent = "Tên người chơi " + (sapXep === "asc" ? "▲" : "▼");
+        nutSap.setAttribute("aria-label", "Sắp xếp theo tên " + (sapXep === "asc" ? "từ A đến Z" : "từ Z đến A"));
+        capNhatLoc();
+
+        const kw = boDau(tim.value);
+        const ds = ROSTER
+            .filter(m => (!loc.value || m.phai === loc.value) && (!kw || boDau(m.ten).includes(kw)))
+            .sort((a, b) => a.ten.localeCompare(b.ten, "vi") * (sapXep === "asc" ? 1 : -1));
+
+        tong.textContent = "Hiển thị " + ds.length + " / " + ROSTER.length + " thành viên";
+        tbody.replaceChildren();
+
+        if (ds.length === 0) {
+            const tr = document.createElement("tr");
+            const td = document.createElement("td");
+            td.colSpan = 3;
+            td.className = "ql-rong";
+            td.textContent = ROSTER.length === 0
+                ? "Chưa có thành viên nào. Nhập tên ở phần Thêm thành viên phía trên."
+                : "Không tìm thấy thành viên phù hợp.";
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+
+        let oSua = null;
+        ds.forEach(m => {
+            const tr = document.createElement("tr");
+            const tdTen = document.createElement("td");
+            const tdPhai = document.createElement("td");
+            const tdThao = document.createElement("td");
+            tdThao.className = "ql-thao-tac";
+
+            if (m === dangSua) {
+                const inTen = document.createElement("input");
+                inTen.className = "ql-sua-ten";
+                inTen.value = m.ten;
+                inTen.setAttribute("aria-label", "Tên thành viên");
+                const selPhai = document.createElement("select");
+                selPhai.className = "ql-sua-phai";
+                selPhai.setAttribute("aria-label", "Phái");
+                PHAI.forEach(p => {
+                    const op = document.createElement("option");
+                    op.value = p;
+                    op.textContent = p;
+                    selPhai.appendChild(op);
+                });
+                selPhai.value = m.phai;
+                const nutLuu = document.createElement("button");
+                nutLuu.type = "button";
+                nutLuu.className = "ql-nut chinh";
+                nutLuu.textContent = "Lưu";
+                nutLuu.addEventListener("click", () => luuSua(m, inTen.value, selPhai.value));
+                const nutHuy = document.createElement("button");
+                nutHuy.type = "button";
+                nutHuy.className = "ql-nut";
+                nutHuy.textContent = "Hủy";
+                nutHuy.addEventListener("click", () => { dangSua = null; loi.textContent = ""; veBang(); });
+                inTen.addEventListener("keydown", e => {
+                    if (e.key === "Enter") luuSua(m, inTen.value, selPhai.value);
+                    if (e.key === "Escape") { e.stopPropagation(); dangSua = null; veBang(); }
+                });
+                tdTen.appendChild(inTen);
+                tdPhai.appendChild(selPhai);
+                tdThao.append(nutLuu, nutHuy);
+                oSua = inTen;
+            } else {
+                tdTen.textContent = m.ten;
+                const chip = document.createElement("span");
+                chip.className = "ql-chip";
+                chip.textContent = m.phai;
+                datMau(chip, m.phai);
+                tdPhai.appendChild(chip);
+
+                const nutSuaTen = document.createElement("button");
+                nutSuaTen.type = "button";
+                nutSuaTen.className = "ql-nut";
+                nutSuaTen.textContent = "Sửa";
+                nutSuaTen.setAttribute("aria-label", "Sửa " + m.ten);
+                nutSuaTen.addEventListener("click", () => { dangSua = m; loi.textContent = ""; veBang(); });
+                const nutXoa = document.createElement("button");
+                nutXoa.type = "button";
+                nutXoa.className = "ql-nut nguy";
+                nutXoa.textContent = "Xóa";
+                nutXoa.setAttribute("aria-label", "Xóa " + m.ten);
+                nutXoa.addEventListener("click", () => {
+                    if (!confirm("Xóa \"" + m.ten + "\" khỏi danh sách bang?")) return;
+                    const i = ROSTER.indexOf(m);
+                    if (i >= 0) ROSTER.splice(i, 1);
+                    if (dangSua === m) dangSua = null;
+                    luuRoster();
+                    bao("Đã xóa \"" + m.ten + "\".", false);
+                    veBang();
+                });
+                tdThao.append(nutSuaTen, nutXoa);
+            }
+            tr.append(tdTen, tdPhai, tdThao);
+            tbody.appendChild(tr);
+        });
+        if (oSua) { oSua.focus(); oSua.select(); }
+    }
+
+    function themMoi() {
+        const phai = themPhai.value;
+        const ds = themTen.value.split(/[\n,;]+/).map(t => t.replace(/\s+/g, " ").trim()).filter(Boolean);
+        if (ds.length === 0) {
+            bao("Hãy nhập tên thành viên.", true);
+            themTen.focus();
+            return;
+        }
+        let them = 0;
+        const trung = [];
+        ds.forEach(ten => {
+            const k = chuanHoa(ten);
+            const co = ROSTER.find(x => chuanHoa(x.ten) === k);
+            if (co) { trung.push(ten + " (phái " + co.phai + ")"); return; }
+            ROSTER.push({ ten, phai });
+            them++;
+        });
+        if (them > 0) {
+            luuRoster();
+            themTen.value = "";
+            tim.value = "";
+            loc.value = "";       // bỏ bộ lọc để thấy người vừa thêm
+        }
+        bao(
+            (them ? "Đã thêm " + them + " thành viên vào phái " + phai + ". " : "") +
+            (trung.length ? "Đã có sẵn, không thêm: " + trung.join(", ") + "." : ""),
+            trung.length > 0
+        );
+        veBang();
+        themTen.focus();
+    }
+    themNut.addEventListener("click", themMoi);
+    themTen.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); themMoi(); }
+    });
+
+    tim.addEventListener("input", veBang);
+    loc.addEventListener("change", veBang);
+    nutSap.addEventListener("click", () => { sapXep = sapXep === "asc" ? "desc" : "asc"; veBang(); });
+
+    const hangDong = document.createElement("div");
+    hangDong.className = "chon-phai-dong";
+    const nutDong = document.createElement("button");
+    nutDong.type = "button";
+    nutDong.textContent = "Đóng";
+    nutDong.addEventListener("click", () => nen.remove());
+    hangDong.appendChild(nutDong);
+
+    hop.append(dau, moTa, them, thanh, wrap, loi, hangDong);
+    nen.appendChild(hop);
+    document.body.appendChild(nen);
+    veBang();
 }
 
 // 7. Cửa sổ Thành Viên (chia theo phái)
@@ -1244,6 +1582,9 @@ function apDungTuMayChu(key, val) {
     } else if (key === "slots") {
         duLieu = val;
         localStorage.setItem(KEY, JSON.stringify(duLieu));
+    } else if (key === "roster") {
+        ROSTER = chuanRoster(val);
+        localStorage.setItem(KEY_ROSTER, JSON.stringify(ROSTER));
     } else if (key === "titles") {
         luuTieuDe = val;
         localStorage.setItem(KEY_TIEUDE, JSON.stringify(luuTieuDe));
@@ -1260,7 +1601,7 @@ async function dongBo() {
         const map = {};
         rows.forEach(r => { map[r.key] = r.value; });
         let doi = false;
-        const moi = { members: () => DANH_SACH, slots: () => duLieu, titles: () => luuTieuDe };
+        const moi = { members: () => DANH_SACH, slots: () => duLieu, titles: () => luuTieuDe, roster: () => ROSTER };
 
         Object.keys(moi).forEach(key => {
             if (map[key] !== undefined) {
@@ -1293,6 +1634,7 @@ function apDungQuyen() {
 
     const bat = (id, hien) => { const el = document.getElementById(id); if (el) el.hidden = !hien; };
     bat("btn-clear", a);
+    bat("btn-roster", a);
     bat("btn-members", a);
     bat("btn-logout", a);
     bat("btn-login", !a);
@@ -1329,6 +1671,17 @@ function apDungQuyen() {
 function khoiTao() {
     themGiaoDien();
 
+    // Nút "Quản Lý Thành Viên" tự tạo bằng JS (không cần sửa index.html)
+    const khungNut = document.querySelector(".toolbar-actions");
+    if (khungNut && !document.getElementById("btn-roster")) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.id = "btn-roster";
+        b.hidden = true;
+        b.textContent = "Quản Lý Thành Viên";
+        khungNut.insertBefore(b, document.getElementById("btn-members") || khungNut.firstChild);
+    }
+    document.getElementById("btn-roster")?.addEventListener("click", moQuanLy);
     document.getElementById("btn-members")?.addEventListener("click", moThanhVien);
     khoiTaoTieuDe();
     khoiTaoViTri();
@@ -1379,6 +1732,9 @@ function khoiTao() {
 
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", khoiTao);
+} else {
+    khoiTao();
+}
 } else {
     khoiTao();
 }
