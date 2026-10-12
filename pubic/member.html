@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý thành viên | 404 NOT FOUND</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="members.css">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand-mark">404</div>
+      <div class="brand-copy">
+        <h1>Quản lý <span>thành viên</span></h1>
+        <p class="subtitle">Danh sách toàn bộ thành viên trong bang</p>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <a class="mb-quay-lai" href="index.html">← Về trang xếp đội hình</a>
+      <span class="hint" data-giu></span>
+      <div class="toolbar-actions">
+        <button type="button" id="btn-login">Đăng nhập</button>
+        <button type="button" id="btn-logout" hidden>Đăng xuất</button>
+      </div>
+    </section>
+
+    <!-- Người chưa đăng nhập -->
+    <section id="mb-cong" class="mb-cong" hidden>
+      <h2>Trang dành cho quản trị viên</h2>
+      <p>Hãy đăng nhập để xem và chỉnh sửa danh sách thành viên của bang.</p>
+      <button type="button" id="mb-cong-dangnhap">Đăng nhập</button>
+    </section>
+
+    <!-- Nội dung chính: script members.js tự dựng -->
+    <div id="mb-chinh" hidden></div>
+
+    <footer>
+      <span>404 NOT FOUND</span>
+    </footer>
+  </main>
+  <script src="script.js"></script>
+  <script src="members.js"></script>
+</body>
+</html>
