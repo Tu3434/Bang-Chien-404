@@ -210,3 +210,31 @@ body.dark-mode .v10-dialog.sakura-roster-modal {
   backdrop-filter: none !important;
 }
 .sakura-roster-modal .roster-search input { background: #fff !important; }
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap');
+
+/* Font tiếng Việt cho popup chọn nhân vật */
+.v10-dialog.sakura-roster-modal,
+.v10-dialog.sakura-roster-modal * {
+  font-family: 'Be Vietnam Pro', sans-serif !important;
+}
+
+/* Các nút */
+.sakura-roster-modal button {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px;
+}
+
+/* Tên nhân vật */
+.sakura-roster-modal .roster-info strong {
+  font-weight: 800 !important;
+  letter-spacing: -0.4px;
+}
+
+/* Tiêu đề */
+.sakura-roster-modal h3 {
+  font-weight: 800 !important;
+  letter-spacing: -0.6px;
+}
+
