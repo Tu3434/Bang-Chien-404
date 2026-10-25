@@ -1,0 +1,1 @@
+Sakura asset images for 404 NOT FOUND. Note: faction banner PNGs contain sample labels; use as design references or replace labels with HTML overlays. CSS example: background-image: url("/assets/modal-background.png"); background-size: cover;
