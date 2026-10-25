@@ -15,7 +15,35 @@ app.post('/api/logout',async(req,res)=>{try{if(req.cookies.admin_session)await p
 async function round(){const r=await pool.query('SELECT id,title FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1');return r.rows[0]}
 app.get('/api/attendance',async(req,res)=>{try{const active=await round();const entries=active?(await pool.query('SELECT id,character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at ASC',[active.id])).rows:[];res.json({round:active,entries,admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
 app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
-app.delete('/api/attendance/:id',limiter,async(req,res)=>{try{const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'ID không hợp lệ'});const admin=await optionalAuth(req);let r;if(admin)r=await pool.query('DELETE FROM attendance_entries WHERE id=$1 RETURNING id',[id]);else{const secret=String(req.body?.secret||'');if(!/^[a-f0-9]{64}$/.test(secret))return res.status(403).json({error:'Bạn chỉ có thể xóa lượt điểm danh của mình trên thiết bị này'});r=await pool.query('DELETE FROM attendance_entries WHERE id=$1 AND owner_hash=$2 RETURNING id',[id,sha(secret)])}if(!r.rowCount)return res.status(403).json({error:'Không có quyền xóa hoặc tên không tồn tại'});res.json({ok:true})}catch(e){sendError(res,e)}});
+app.delete('/api/attendance/:id',limiter,async(req,res)=>{
+ let client;
+ try{
+  const id=Number(req.params.id);
+  if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'ID không hợp lệ'});
+  const admin=await optionalAuth(req);
+  const secret=String(req.body?.secret||'');
+  if(!admin&&!/^[a-f0-9]{64}$/.test(secret))return res.status(403).json({error:'Bạn chỉ có thể xóa lượt điểm danh của mình trên thiết bị này'});
+  client=await pool.connect();
+  await client.query('BEGIN');
+  // Same lock as formation assignments: prevents a deletion racing with an assignment.
+  await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+  const removed=admin
+   ?await client.query('DELETE FROM attendance_entries WHERE id=$1 RETURNING character_name,round_id',[id])
+   :await client.query('DELETE FROM attendance_entries WHERE id=$1 AND owner_hash=$2 RETURNING character_name,round_id',[id,sha(secret)]);
+  if(!removed.rowCount){await client.query('ROLLBACK');return res.status(403).json({error:'Không có quyền xóa hoặc tên không tồn tại'});}
+  const {character_name,round_id}=removed.rows[0];
+  // Keep the formation entry only if the same character is still registered in the active round.
+  const remaining=await client.query(`SELECT 1 FROM attendance_entries e JOIN attendance_rounds r ON r.id=e.round_id WHERE r.is_active=true AND lower(btrim(e.character_name))=lower(btrim($1)) LIMIT 1`,[character_name]);
+  let cleared=0;
+  if(!remaining.rowCount){
+   const result=await client.query(`DELETE FROM formation_cells WHERE cell_key LIKE '%:name' AND lower(btrim(value))=lower(btrim($1))`,[character_name]);
+   cleared=result.rowCount;
+  }
+  await client.query('COMMIT');
+  res.json({ok:true,formation_cleared:cleared});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}
+ finally{if(client)client.release()}
+});
 app.get('/api/formation',async(req,res)=>{try{const r=await pool.query('SELECT cell_key,value,phai FROM formation_cells');res.json(r.rows)}catch(e){sendError(res,e)}});
 app.put('/api/formation/:key',auth,async(req,res)=>{let client;try{
  const key=req.params.key,value=String(req.body?.value||'').trim(),phai=String(req.body?.phai||'');
