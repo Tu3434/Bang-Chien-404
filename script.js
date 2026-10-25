@@ -129,8 +129,42 @@ async function layRaidHelper(id) {
     throw new Error("Không tìm thấy sự kiện. Hãy kiểm tra lại link hoặc ID (copy trực tiếp từ thanh địa chỉ).");
 }
 
+// Danh sách đăng ký bang chiến được tải từ Supabase, không ghi đè thành viên chính.
+let DANH_SACH_DIEM_DANH = Object.fromEntries(PHAI.map(p => [p, []]));
+let LOI_DIEM_DANH = "";
+let LAN_TAI_DIEM_DANH = 0;
+async function taiDiemDanhChoDoiHinh(force = false) {
+    if (!force && Date.now() - LAN_TAI_DIEM_DANH < 10000) return;
+    const headers = { apikey: SUPABASE_KEY };
+    const get = async path => {
+        const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, { headers, cache: "no-store" });
+        if (!res.ok) throw new Error("Supabase HTTP " + res.status + ": " + (await res.text()).slice(0, 160));
+        return res.json();
+    };
+    try {
+        const rounds = await get("attendance_rounds?select=id&is_active=eq.true&limit=1");
+        const next = Object.fromEntries(PHAI.map(p => [p, []]));
+        if (rounds.length) {
+            const rows = await get("attendance_entries?select=ingame_name,class_name&round_id=eq." + encodeURIComponent(rounds[0].id) + "&limit=1000");
+            rows.forEach(r => {
+                if (next[r.class_name] && typeof r.ingame_name === "string") next[r.class_name].push(r.ingame_name);
+            });
+        }
+        DANH_SACH_DIEM_DANH = next;
+        LOI_DIEM_DANH = rounds.length ? "" : "Chưa có đợt điểm danh đang mở.";
+        LAN_TAI_DIEM_DANH = Date.now();
+        veLaiBang();
+    } catch (err) {
+        LOI_DIEM_DANH = "Không thể tải người điểm danh: " + err.message;
+        LAN_TAI_DIEM_DANH = 0;
+    }
+}
+function danhSachCoDiemDanh(phai) {
+    return [...new Map([...(DANH_SACH[phai] || []), ...(DANH_SACH_DIEM_DANH[phai] || [])]
+        .map(ten => [ten.trim().toLocaleLowerCase("vi"), ten])).values()];
+}
 function timPhai(ten) {
-    return PHAI.find(p => DANH_SACH[p].includes(ten));
+    return PHAI.find(p => danhSachCoDiemDanh(p).includes(ten));
 }
 
 // Tô màu ô đội hình theo phái của người được xếp
@@ -607,8 +641,9 @@ function dienTen(o, ten) {
 }
 
 // 6. Mở bảng chọn phái (lấy dữ liệu từ DANH_SACH = danh sách Thành Viên)
-function moBangChon(o) {
+async function moBangChon(o) {
     if (!laAdmin()) return;
+    await taiDiemDanhChoDoiHinh(true);
     document.querySelector(".chon-phai-nen")?.remove();
 
     const nen = document.createElement("div");
@@ -675,14 +710,14 @@ function moBangChon(o) {
         }
 
         const tenNguoiChoi = [
-            ...new Set(DANH_SACH[phai] || [])
+            ...new Set(danhSachCoDiemDanh(phai))
         ].sort((a, b) => a.localeCompare(b, "vi"));
 
         if (tenNguoiChoi.length === 0) {
             const rong = document.createElement("div");
             rong.className = "chon-phai-rong";
             rong.textContent =
-                "Chưa có thành viên. Bấm nút Thành Viên để thêm người vào phái này.";
+                LOI_DIEM_DANH || "Chưa có người điểm danh hoặc thành viên trong phái này.";
             danhSachTen.appendChild(rong);
             return;
         }
@@ -1466,6 +1501,7 @@ function khoiTao() {
         trangThai("Chưa kết nối máy chủ: dữ liệu chỉ lưu trên máy này.", true);
     }
     chayBuoc("đồng bộ", dongBo);
+    taiDiemDanhChoDoiHinh(true);
     // Người xem: tự cập nhật mỗi 15 giây và khi quay lại tab
     setInterval(() => { if (!laAdmin() && !document.hidden) dongBo(); }, 15000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && !laAdmin()) dongBo(); });
