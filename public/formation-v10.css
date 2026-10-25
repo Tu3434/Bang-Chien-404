@@ -81,3 +81,19 @@ body.dark-mode .sakura-roster-modal{background:linear-gradient(150deg,#39273d,#2
 .sakura-roster-modal .roster-item:after{display:none}
 body.dark-mode .v10-dialog.sakura-roster-modal {background-image:linear-gradient(180deg,rgba(40,29,48,.86),rgba(36,28,44,.96)),url('/assets/modal-background.png')}
 @media(max-width:600px){.sakura-roster-modal .roster-item{background-size:100% 100%,auto 100%;background-position:center,right center}}
+
+/* Hiển thị ảnh nền môn phái nguyên bản */
+.character-card.toai-mong {
+  background-image: url("/assets/toai-mong.png") !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+}
+
+/* Loại bỏ lớp phủ làm mờ ảnh */
+.character-card.toai-mong::before,
+.character-card.toai-mong::after {
+  display: none !important;
+}
+
