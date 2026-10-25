@@ -1,131 +1,3 @@
-
-.v10-layout{display:grid;grid-template-columns:1fr;gap:20px}.formation-v10{min-width:0}.formation-v10 .table-wrap{overflow-x:auto}.formation-v10 table{width:100%;table-layout:fixed;min-width:620px;border-spacing:4px;border-collapse:separate}.formation-v10 th{background:#fff0f7;color:#993960;border:1px solid #f5cfe0;border-radius:8px;padding:12px 5px}.formation-v10 td{height:43px;min-width:0;background:#fff;border:1px solid #eddde7;border-radius:7px;text-align:center;padding:6px;overflow-wrap:anywhere;font-size:13px}.formation-v10 td.skill-cell{background:#fff7fb;color:#7b4062}.formation-v10 td.member-cell{font-weight:700}.formation-v10 td.can-edit{cursor:pointer}.formation-v10 td.can-edit:hover{outline:2px solid #ec6caa}.formation-v10 td:focus-visible{outline:2px solid #c4427e}.formation-v10 .purple{background:#b7abd9}.formation-v10 .blue{background:#b9e1f7}.formation-v10 .red{background:#ee9ba2}.formation-v10 .green{background:#b6d7a8}.formation-v10 .yellow{background:#ffe3a0}.formation-v10 .darkblue{background:#4f79d1;color:white}.formation-v10 .pink{background:#f6c6eb}.v10-layout .formation h2 small{float:right;font-size:12px}#sync-state{margin:12px 5px;color:#9d4472;font-size:13px}.v10-modal{position:fixed;inset:0;z-index:100000;background:#1b122966;display:grid;place-items:center;padding:16px}.v10-dialog{background:#fff;border-radius:18px;padding:22px;width:min(440px,100%);max-height:85vh;overflow:auto;box-shadow:0 12px 50px #0003;color:#592e4b}.v10-dialog h3{margin:0 0 14px}.v10-dialog input,.v10-dialog select{width:100%;padding:11px;margin:5px 0 12px;border:1px solid #e8bed2;border-radius:9px;font:inherit}.v10-dialog button{border:0;border-radius:9px;background:#e95895;color:#fff;padding:10px 14px;cursor:pointer;margin:4px}.v10-dialog button.secondary{background:#f4e5ed;color:#6e3153}.v10-dialog .choices{display:flex;gap:7px;flex-wrap:wrap}.v10-dialog .choices button{background:#fce5ef;color:#a22b68}.v10-dialog .msg{color:#b72550;font-size:13px;min-height:18px}body.dark-mode .v10-dialog{background:#302b40;color:#fff}body.dark-mode .formation-v10 td{border-color:#595366}body.dark-mode .formation-v10 td.skill-cell{background:#373142;color:#fff}@media(max-width:700px){.formation-v10 table{min-width:660px}.v10-layout{gap:12px}}
-
-/* V16: Mau nhan vat trong hop thoai chon PT theo mon phai. */
-.v10-dialog .choices .character-option {
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 10px 14px;
-  margin: 3px;
-  font-weight: 700;
-  line-height: 1.4;
-  transition: transform .15s ease, filter .15s ease;
-}
-.v10-dialog .choices .character-option:not(:disabled):hover {
-  transform: translateY(-2px);
-  filter: brightness(.96);
-}
-.v10-dialog .choices .character-option[data-class="Cửu Linh"] {background:#b7abd9;color:#29213d;}
-.v10-dialog .choices .character-option[data-class="Toái Mộng"] {background:#b9e1f7;color:#153d5b;}
-.v10-dialog .choices .character-option[data-class="Huyết Hà"] {background:#ee9ba2;color:#5c1d2a;}
-.v10-dialog .choices .character-option[data-class="Long Ngâm"] {background:#b6d7a8;color:#25452d;}
-.v10-dialog .choices .character-option[data-class="Thiết Y"] {background:#ffe3a0;color:#64420b;}
-.v10-dialog .choices .character-option[data-class="Thần Tương"] {background:#4f79d1;color:#fff;}
-.v10-dialog .choices .character-option[data-class="Tố Vấn"] {background:#f6c6eb;color:#672b58;}
-.v10-dialog .choices .character-option.is-occupied {
-  opacity:.55; cursor:not-allowed; text-decoration:none;
-}
-body.dark-mode .v10-dialog .choices .character-option {border-color:#ffffff24;}
-
-/* V17 — Sakura Premium character roster. Scoped to PT selection modal only. */
-.v10-modal:has(.sakura-roster-modal){background:rgba(42,25,48,.60);backdrop-filter:blur(8px);padding:18px}
-.v10-dialog.sakura-roster-modal{position:relative;width:min(860px,100%);max-height:min(91vh,1000px);overflow-y:auto;overflow-x:hidden;padding:35px 36px 30px;border:1px solid #f5b5d0;border-radius:27px;color:#663252;background:radial-gradient(ellipse at 2% 2%,#ffe0ec 0,transparent 35%),radial-gradient(ellipse at 95% 5%,#ffe6ee 0,transparent 37%),linear-gradient(160deg,#fff7fa 0%,#fffafd 55%,#fff0f6 100%);box-shadow:0 28px 90px #3d163c55,0 0 0 6px #ffffff35;isolation:isolate}
-.sakura-roster-modal:before,.sakura-roster-modal:after{content:'✿';position:absolute;pointer-events:none;color:#ee7bac55;font-size:110px;line-height:1;z-index:-1}.sakura-roster-modal:before{top:-22px;left:-16px;transform:rotate(-20deg)}.sakura-roster-modal:after{bottom:-36px;right:-9px;transform:rotate(25deg)}
-.sakura-roster-modal h3{margin:0 45px 5px 0;color:#9d285a;font-size:clamp(23px,3vw,34px);font-weight:850;letter-spacing:-.7px}
-.sakura-roster-modal .roster-subtitle{margin:0 35px 24px 0;color:#a06d83;font-size:14px}
-.sakura-roster-modal .roster-x{position:absolute;right:25px;top:24px;display:grid;place-items:center;width:38px;height:38px;margin:0!important;padding:0!important;border:1px solid #f2c3d6!important;border-radius:50%!important;background:#fff9fc!important;color:#b44779!important;font-size:19px;box-shadow:0 4px 12px #e77caa22}
-.sakura-roster-modal .content{display:flex;flex-direction:column;gap:15px}
-.sakura-roster-modal .roster-search{position:relative}.sakura-roster-modal .roster-search span{position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:29px;color:#b35b82;pointer-events:none}
-.sakura-roster-modal .roster-search input{box-sizing:border-box;margin:0!important;width:100%;height:56px;padding:13px 18px 13px 53px;border:1px solid #edbfd1;border-radius:16px;background:#ffffffd9;font-size:16px;outline:none;transition:box-shadow .2s,border-color .2s}
-.sakura-roster-modal .roster-search input:focus{border-color:#e9679d;box-shadow:0 0 0 4px #f6bad34d}
-.sakura-roster-modal .roster-filters{display:flex;gap:8px;flex-wrap:wrap}
-.sakura-roster-modal .roster-filter{margin:0!important;padding:9px 13px!important;border:1px solid #f1cddd!important;border-radius:13px!important;background:#fff3f8!important;color:#773d5a!important;font-size:13px;font-weight:750;transition:transform .16s,box-shadow .16s}
-.sakura-roster-modal .roster-filter:hover{transform:translateY(-2px);box-shadow:0 4px 10px #e578a32b}.sakura-roster-modal .roster-filter[aria-pressed=true]{background:linear-gradient(110deg,#f174a6,#e9498c)!important;color:white!important;border-color:#e95793!important;box-shadow:0 5px 14px #e9579340}
-.sakura-roster-modal .roster-list{display:flex;flex-direction:column;gap:9px;min-height:80px;max-height:min(40vh,380px);overflow:auto;padding:3px 5px 4px 0;scrollbar-color:#e7a4bf transparent;scrollbar-width:thin}
-.sakura-roster-modal .roster-item{--c1:#eee0f6;--c2:#f9f0ff;--ink:#683e7d;--line:#d8b8e6;position:relative;display:flex;align-items:center;gap:14px;min-height:70px;padding:10px 14px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(105deg,var(--c1),var(--c2));color:var(--ink);overflow:hidden;transition:transform .16s,box-shadow .16s}
-.sakura-roster-modal .roster-item:after{content:'✿  ❀';position:absolute;right:110px;bottom:-19px;color:var(--ink);opacity:.07;font-size:58px;pointer-events:none;white-space:nowrap}
-.sakura-roster-modal .roster-item:not(.roster-occupied):hover{transform:translateY(-1px);box-shadow:0 6px 16px #8f4a7520}.sakura-roster-modal .roster-item.roster-selected{outline:2px solid #ed6da8;outline-offset:-2px}
-.sakura-roster-modal .roster-item[data-class='Cửu Linh']{--c1:#dfd1f1;--c2:#f5eafa;--ink:#593a83;--line:#c8a8df}
-.sakura-roster-modal .roster-item[data-class='Toái Mộng']{--c1:#d1eafa;--c2:#ecf7ff;--ink:#235f91;--line:#a4d1f0}
-.sakura-roster-modal .roster-item[data-class='Huyết Hà']{--c1:#ffd7dd;--c2:#fff0f1;--ink:#a72f51;--line:#f1a6b4}
-.sakura-roster-modal .roster-item[data-class='Long Ngâm']{--c1:#d5ebd4;--c2:#f0faed;--ink:#39754d;--line:#a7d5a9}
-.sakura-roster-modal .roster-item[data-class='Thiết Y']{--c1:#ffe3ad;--c2:#fff5df;--ink:#99611f;--line:#efc87d}
-.sakura-roster-modal .roster-item[data-class='Thần Tương']{--c1:#bfd0fb;--c2:#e9eeff;--ink:#3157aa;--line:#92acee}
-.sakura-roster-modal .roster-item[data-class='Tố Vấn']{--c1:#f8d1f0;--c2:#fff0fa;--ink:#9d438c;--line:#eda9dc}
-.sakura-roster-modal .roster-emblem{flex:0 0 45px;width:45px;height:45px;display:grid;place-items:center;border:2px solid #ffffffb0;border-radius:50%;background:var(--ink);color:#fff;font-size:25px;box-shadow:0 3px 10px #0002}
-.sakura-roster-modal .roster-info{display:flex;flex:1;align-items:center;gap:12px;min-width:0;flex-wrap:wrap}.sakura-roster-modal .roster-info strong{font-size:15px;overflow-wrap:anywhere}.sakura-roster-modal .roster-tag{display:inline-flex;padding:5px 12px;border-radius:30px;background:#ffffff7d;color:var(--ink);font-size:12px;font-weight:750;white-space:nowrap}
-.sakura-roster-modal .roster-pick{position:relative;z-index:1;flex-shrink:0;margin:0!important;padding:10px 17px!important;border:1px solid var(--ink)!important;border-radius:13px!important;background:#fff9!important;color:var(--ink)!important;font-weight:750;font-size:13px;white-space:nowrap}.sakura-roster-modal .roster-pick:not(:disabled):hover{background:white!important}.sakura-roster-modal .roster-pick:disabled{border-color:#b7aab7!important;background:#d1c8d0a8!important;color:#786c78!important;cursor:not-allowed;opacity:1}.sakura-roster-modal .roster-occupied{opacity:.68}
-.sakura-roster-modal .roster-empty{text-align:center;color:#976f85;padding:18px}.sakura-roster-modal .roster-status{min-height:18px;margin:0;color:#a53870;font-size:13px}
-.sakura-roster-modal .roster-footer{display:flex;gap:14px;align-items:stretch;padding-top:18px;border-top:1px solid #f0cadb}.sakura-roster-modal .roster-footer button{flex:1;min-height:52px;margin:0!important;border-radius:14px!important;font-size:15px;font-weight:800}.sakura-roster-modal .roster-clear{background:#f7e9ef!important;color:#945a75!important;border:1px solid #eacbd8!important}.sakura-roster-modal .roster-save{background:linear-gradient(110deg,#f378ad,#e94a90)!important;color:white!important;box-shadow:0 7px 17px #e84c8e40}.sakura-roster-modal .roster-footer button:disabled{opacity:.6}
-.sakura-roster-modal>button.close.roster-x{display:grid}
-.sakura-roster-modal>.msg{display:none}
-body.dark-mode .sakura-roster-modal{background:linear-gradient(150deg,#39273d,#292335);color:#f9e7f1;border-color:#7b506a}body.dark-mode .sakura-roster-modal h3{color:#ffa2cb}body.dark-mode .sakura-roster-modal .roster-subtitle{color:#e3b4c9}body.dark-mode .sakura-roster-modal .roster-search input{background:#3b3044;color:white;border-color:#7e526d}body.dark-mode .sakura-roster-modal .roster-filter:not([aria-pressed=true]){background:#44334c!important;color:#f7cce0!important;border-color:#6c4b60!important}
-@media(max-width:600px){.v10-modal:has(.sakura-roster-modal){padding:8px}.v10-dialog.sakura-roster-modal{padding:24px 16px 18px;border-radius:19px;max-height:95vh}.sakura-roster-modal .roster-x{right:14px;top:14px}.sakura-roster-modal .roster-info{gap:5px}.sakura-roster-modal .roster-emblem{flex-basis:36px;width:36px;height:36px;font-size:19px}.sakura-roster-modal .roster-item{gap:8px;padding:9px}.sakura-roster-modal .roster-pick{padding:8px!important;font-size:12px}.sakura-roster-modal .roster-footer{gap:8px}.sakura-roster-modal .roster-footer button{font-size:13px}}
-
-/* V18: Real image assets connected to character-selection modal. */
-.v10-dialog.sakura-roster-modal {
-  background-image: linear-gradient(180deg,rgba(255,250,253,.16),rgba(255,247,251,.90) 57%,rgba(255,248,252,.98)),url('/assets/modal-background.png');
-  background-size:cover; background-position:center top; background-repeat:no-repeat;
-}
-/* Keep generated banner text out of the readable left side: only its right-side scenery is used. */
-.sakura-roster-modal .roster-item { background-image:linear-gradient(90deg,var(--c1) 0%,var(--c2) 42%,transparent 100%),var(--faction-image);background-size:100% 100%,auto 100%;background-position:center,right center;background-repeat:no-repeat; }
-.sakura-roster-modal .roster-item[data-class='Cửu Linh']{--faction-image:url('/assets/cuu-linh.png')}
-.sakura-roster-modal .roster-item[data-class='Toái Mộng']{--faction-image:url('/assets/toai-mong.png')}
-.sakura-roster-modal .roster-item[data-class='Huyết Hà']{--faction-image:url('/assets/huyet-ha.png')}
-.sakura-roster-modal .roster-item[data-class='Long Ngâm']{--faction-image:url('/assets/long-ngam.png')}
-.sakura-roster-modal .roster-item[data-class='Thiết Y']{--faction-image:url('/assets/thiet-y.png')}
-.sakura-roster-modal .roster-item[data-class='Thần Tương']{--faction-image:url('/assets/than-tuong.png')}
-.sakura-roster-modal .roster-item[data-class='Tố Vấn']{--faction-image:url('/assets/to-van.png')}
-/* Improve readability on top of illustration and keep controls above image. */
-.sakura-roster-modal .roster-item .roster-info,.sakura-roster-modal .roster-item .roster-pick,.sakura-roster-modal .roster-item .roster-emblem{position:relative;z-index:1}
-.sakura-roster-modal .roster-item:after{display:none}
-body.dark-mode .v10-dialog.sakura-roster-modal {background-image:linear-gradient(180deg,rgba(40,29,48,.86),rgba(36,28,44,.96)),url('/assets/modal-background.png')}
-@media(max-width:600px){.sakura-roster-modal .roster-item{background-size:100% 100%,auto 100%;background-position:center,right center}}
-
-
-/* V21 - Sakura Premium player name on faction banner */
-.sakura-roster-modal .roster-item {
-  min-height: 94px;
-  padding: 12px 18px;
-  gap: 12px;
-  background-image: var(--faction-image) !important;
-  background-size: 100% 100% !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-}
-/* The faction symbol is already part of the PNG. */
-.sakura-roster-modal .roster-item .roster-emblem,
-.sakura-roster-modal .roster-item .roster-tag { display: none !important; }
-.sakura-roster-modal .roster-item .roster-info {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin-left: clamp(105px, 22%, 210px);
-  margin-right: 8px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-}
-.sakura-roster-modal .roster-item .roster-info strong {
-  display: inline-block;
-  max-width: 100%;
-  padding: 9px 16px;
-  border: 1px solid rgba(255,255,255,.76);
-  border-radius: 12px;
-  background: rgba(255,255,255,.83);
-  color: var(--ink, #61324d);
-  font-size: clamp(14px, 1.5vw, 18px);
-  font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: .1px;
-  text-shadow: 0 1px 0 rgba(255,255,255,.65);
-  box-shadow: 0 4px 15px rgba(38,20,42,.12);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  overflow-wrap: anywhere;
-}
-.sakura-roster-modal .roster-item .roster-pick {
-  flex: 0 0 auto;
-  margin-left: auto !important;
   border-radius: 12px !important;
   background: rgba(255,255,255,.88) !important;
   box-shadow: 0 3px 12px rgba(28,24,44,.12);
@@ -149,6 +21,105 @@ body.dark-mode .v10-dialog.sakura-roster-modal {background-image:linear-gradient
   }
   .sakura-roster-modal .roster-item .roster-pick {
     padding: 8px 9px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* V22 — Sakura ornamental nameplate, inspired by the approved mockup.
+   CSS-only decoration: player name stays live HTML text. */
+.sakura-roster-modal .roster-item {
+  min-height: 106px;
+  padding: 12px clamp(12px, 2.2vw, 24px);
+  gap: 12px;
+  background-image: var(--faction-image) !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  isolation: isolate;
+}
+.sakura-roster-modal .roster-item .roster-info {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: clamp(112px, 22%, 220px);
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sakura-roster-modal .roster-item .roster-info strong {
+  --plate-ink: var(--ink, #245d91);
+  position: relative;
+  box-sizing: border-box;
+  display: block;
+  width: fit-content;
+  max-width: min(100%, 440px);
+  min-width: 0;
+  padding: 11px clamp(17px, 2.8vw, 30px);
+  border: 2px solid rgba(255,255,255,.96);
+  border-radius: 22px;
+  background: linear-gradient(180deg,rgba(255,255,255,.97),rgba(236,249,255,.88));
+  color: var(--plate-ink);
+  font-size: clamp(16px, 2vw, 23px);
+  font-weight: 850;
+  line-height: 1.25;
+  letter-spacing: .15px;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255,255,255,.95);
+  box-shadow: 0 0 0 2px color-mix(in srgb,var(--plate-ink) 45%,transparent),
+              0 5px 16px rgba(13,50,95,.18),
+              inset 0 0 0 2px rgba(255,255,255,.55);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  z-index: 1;
+}
+.sakura-roster-modal .roster-item .roster-info strong::before,
+.sakura-roster-modal .roster-item .roster-info strong::after {
+  content: '✧';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--plate-ink);
+  font-size: 16px;
+  line-height: 1;
+  text-shadow: 0 0 5px white;
+  pointer-events: none;
+}
+.sakura-roster-modal .roster-item .roster-info strong::before { left: 5px; }
+.sakura-roster-modal .roster-item .roster-info strong::after { right: 5px; }
+.sakura-roster-modal .roster-item .roster-pick {
+  flex: 0 0 auto;
+  margin-left: auto !important;
+  padding: 10px 16px !important;
+  border: 1px solid color-mix(in srgb,var(--ink) 60%,white) !important;
+  border-radius: 15px !important;
+  background: rgba(246,251,255,.92) !important;
+  box-shadow: 0 3px 12px rgba(18,43,79,.15);
+  backdrop-filter: blur(6px);
+}
+.sakura-roster-modal .roster-item.roster-occupied { opacity: 1; }
+.sakura-roster-modal .roster-item.roster-occupied .roster-pick:disabled {
+  opacity: .88;
+  background: rgba(250,249,253,.91) !important;
+}
+@media(max-width:600px) {
+  .sakura-roster-modal .roster-item { min-height: 76px; padding: 8px 8px; gap: 5px; }
+  .sakura-roster-modal .roster-item .roster-info {
+    margin-left: clamp(65px, 19%, 100px);
+    margin-right: 2px;
+  }
+  .sakura-roster-modal .roster-item .roster-info strong {
+    padding: 8px 12px;
+    border-radius: 13px;
+    font-size: clamp(12px, 3.4vw, 15px);
+  }
+  .sakura-roster-modal .roster-item .roster-info strong::before,
+  .sakura-roster-modal .roster-item .roster-info strong::after { font-size: 10px; }
+  .sakura-roster-modal .roster-item .roster-info strong::before { left: 2px; }
+  .sakura-roster-modal .roster-item .roster-info strong::after { right: 2px; }
+  .sakura-roster-modal .roster-item .roster-pick {
+    padding: 7px 8px !important;
     font-size: 11px !important;
   }
 }
