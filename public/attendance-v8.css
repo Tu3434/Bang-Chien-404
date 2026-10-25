@@ -19,3 +19,10 @@
 .class-picker-menu button[data-class="Tố Vấn"]{background:#f6c6e8;color:#672b58}
 body.dark .class-picker-button:not([data-class]){color:#f7e9f3}
 body.dark .class-picker-menu{background:#302b40;border-color:#70516b}
+
+/* 404 Sakura attendance header logo */
+.hero .logo{background:transparent;box-shadow:none;border-radius:0;overflow:visible;display:flex;align-items:center;justify-content:center;}
+.hero .logo img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 7px 10px rgba(210,60,125,.18));}
+body.dark .hero .logo{background:transparent;}
+body.dark .nav button#theme-toggle{background:#fff1f8;color:#892a5b;}
+@media(max-width:650px){.hero .logo{width:65px;height:65px;}}
