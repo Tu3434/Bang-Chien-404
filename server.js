@@ -17,7 +17,23 @@ app.get('/api/attendance',async(req,res)=>{try{const active=await round();const 
 app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
 app.delete('/api/attendance/:id',limiter,async(req,res)=>{try{const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'ID không hợp lệ'});const admin=await optionalAuth(req);let r;if(admin)r=await pool.query('DELETE FROM attendance_entries WHERE id=$1 RETURNING id',[id]);else{const secret=String(req.body?.secret||'');if(!/^[a-f0-9]{64}$/.test(secret))return res.status(403).json({error:'Bạn chỉ có thể xóa lượt điểm danh của mình trên thiết bị này'});r=await pool.query('DELETE FROM attendance_entries WHERE id=$1 AND owner_hash=$2 RETURNING id',[id,sha(secret)])}if(!r.rowCount)return res.status(403).json({error:'Không có quyền xóa hoặc tên không tồn tại'});res.json({ok:true})}catch(e){sendError(res,e)}});
 app.get('/api/formation',async(req,res)=>{try{const r=await pool.query('SELECT cell_key,value,phai FROM formation_cells');res.json(r.rows)}catch(e){sendError(res,e)}});
-app.put('/api/formation/:key',auth,async(req,res)=>{try{const key=req.params.key,value=String(req.body?.value||''),phai=String(req.body?.phai||'');if(!/^(10|[1-9]):[0-5]:(name|skill)$/.test(key)||value.length>100||(phai&&!classes.includes(phai)))return res.status(400).json({error:'Dữ liệu ô không hợp lệ'});await pool.query('INSERT INTO formation_cells(cell_key,value,phai) VALUES($1,$2,$3) ON CONFLICT(cell_key) DO UPDATE SET value=$2,phai=$3,updated_at=now()',[key,value,phai||null]);res.json({ok:true})}catch(e){sendError(res,e)}});
+app.put('/api/formation/:key',auth,async(req,res)=>{let client;try{
+ const key=req.params.key,value=String(req.body?.value||'').trim(),phai=String(req.body?.phai||'');
+ if(!/^(10|[1-9]):[0-5]:(name|skill)$/.test(key)||value.length>100||(phai&&!classes.includes(phai)))return res.status(400).json({error:'Dữ liệu ô không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');
+ // Serialize assignments across administrators so concurrent requests cannot assign the same player.
+ await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ if(key.endsWith(':name')&&value){
+  const registered=await client.query('SELECT id,class_name FROM attendance_entries WHERE lower(btrim(character_name))=lower($1) ORDER BY id DESC LIMIT 1',[value]);
+  if(!registered.rowCount){await client.query('ROLLBACK');return res.status(400).json({error:'Chỉ được chọn người đã điểm danh'})}
+  const duplicate=await client.query("SELECT cell_key FROM formation_cells WHERE cell_key LIKE '%:name' AND cell_key<>$1 AND lower(btrim(value))=lower($2) LIMIT 1",[key,value]);
+  if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Nhân vật này đã được xếp ở '+duplicate.rows[0].cell_key+'! Không thể xếp trùng.'})}
+  await client.query('INSERT INTO formation_cells(cell_key,value,phai) VALUES($1,$2,$3) ON CONFLICT(cell_key) DO UPDATE SET value=$2,phai=$3,updated_at=now()',[key,value,registered.rows[0].class_name]);
+ }else{
+  await client.query('INSERT INTO formation_cells(cell_key,value,phai) VALUES($1,$2,$3) ON CONFLICT(cell_key) DO UPDATE SET value=$2,phai=$3,updated_at=now()',[key,value,key.endsWith(':skill')?null:(phai||null)]);
+ }
+ await client.query('COMMIT');res.json({ok:true});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 app.delete('/api/formation',auth,async(req,res)=>{try{await pool.query('DELETE FROM formation_cells');res.json({ok:true})}catch(e){sendError(res,e)}});
 app.get('/api/date',async(req,res)=>{try{const r=await pool.query("SELECT value FROM app_settings WHERE key='war_date'");res.json({value:r.rows[0]?.value||'26/09'})}catch(e){sendError(res,e)}});
 app.put('/api/date',auth,async(req,res)=>{try{const value=String(req.body?.value||'').trim();if(value.length>30)return res.status(400).json({error:'Ngày không hợp lệ'});await pool.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[value]);res.json({ok:true})}catch(e){sendError(res,e)}});
