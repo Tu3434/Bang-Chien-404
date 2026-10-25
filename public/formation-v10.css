@@ -94,3 +94,81 @@ body.dark-mode .v10-dialog.sakura-roster-modal {background-image:linear-gradient
   place-items: center;
   padding: 16px;
   background: rgba(39, 22, 45, .65);
+  
+/* Sakura V24 - Banner liền mạch */
+
+.sakura-roster-modal .roster-item {
+  background-image: var(--faction-image) !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  min-height: 105px;
+  padding: 12px 18px;
+  gap: 12px;
+}
+
+/* Ẩn biểu tượng HTML vì banner đã có logo */
+.sakura-roster-modal .roster-emblem,
+.sakura-roster-modal .roster-tag {
+  display: none !important;
+}
+
+/* Vùng tên nhân vật */
+.sakura-roster-modal .roster-info {
+  margin-left: clamp(90px, 24%, 210px);
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+/* Bảng tên kiếm hiệp */
+.sakura-roster-modal .roster-info strong {
+  display: inline-block;
+  max-width: 100%;
+  padding: 11px 22px;
+  border-radius: 18px;
+  border: 2px solid rgba(255,255,255,.9);
+
+  background: linear-gradient(
+    145deg,
+    rgba(255,255,255,.94),
+    rgba(235,248,255,.85)
+  );
+
+  color: var(--ink);
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 850;
+  text-align: center;
+
+  box-shadow:
+    0 0 0 2px var(--line),
+    0 6px 18px rgba(0,0,0,.13);
+
+  backdrop-filter: blur(8px);
+  overflow-wrap: anywhere;
+}
+
+/* Nút chọn */
+.sakura-roster-modal .roster-pick {
+  margin-left: auto !important;
+  background: rgba(255,255,255,.85) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Điện thoại */
+@media (max-width: 600px) {
+  .sakura-roster-modal .roster-item {
+    min-height: 82px;
+    padding: 9px;
+  }
+
+  .sakura-roster-modal .roster-info {
+    margin-left: 20%;
+  }
+
+  .sakura-roster-modal .roster-info strong {
+    font-size: 13px;
+    padding: 7px 9px;
+  }
+}
+
