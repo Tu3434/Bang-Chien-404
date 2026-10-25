@@ -61,3 +61,23 @@ body.dark-mode .v10-dialog .choices .character-option {border-color:#ffffff24;}
 .sakura-roster-modal>.msg{display:none}
 body.dark-mode .sakura-roster-modal{background:linear-gradient(150deg,#39273d,#292335);color:#f9e7f1;border-color:#7b506a}body.dark-mode .sakura-roster-modal h3{color:#ffa2cb}body.dark-mode .sakura-roster-modal .roster-subtitle{color:#e3b4c9}body.dark-mode .sakura-roster-modal .roster-search input{background:#3b3044;color:white;border-color:#7e526d}body.dark-mode .sakura-roster-modal .roster-filter:not([aria-pressed=true]){background:#44334c!important;color:#f7cce0!important;border-color:#6c4b60!important}
 @media(max-width:600px){.v10-modal:has(.sakura-roster-modal){padding:8px}.v10-dialog.sakura-roster-modal{padding:24px 16px 18px;border-radius:19px;max-height:95vh}.sakura-roster-modal .roster-x{right:14px;top:14px}.sakura-roster-modal .roster-info{gap:5px}.sakura-roster-modal .roster-emblem{flex-basis:36px;width:36px;height:36px;font-size:19px}.sakura-roster-modal .roster-item{gap:8px;padding:9px}.sakura-roster-modal .roster-pick{padding:8px!important;font-size:12px}.sakura-roster-modal .roster-footer{gap:8px}.sakura-roster-modal .roster-footer button{font-size:13px}}
+
+/* V18: Real image assets connected to character-selection modal. */
+.v10-dialog.sakura-roster-modal {
+  background-image: linear-gradient(180deg,rgba(255,250,253,.16),rgba(255,247,251,.90) 57%,rgba(255,248,252,.98)),url('/assets/modal-background.png');
+  background-size:cover; background-position:center top; background-repeat:no-repeat;
+}
+/* Keep generated banner text out of the readable left side: only its right-side scenery is used. */
+.sakura-roster-modal .roster-item { background-image:linear-gradient(90deg,var(--c1) 0%,var(--c2) 42%,transparent 100%),var(--faction-image);background-size:100% 100%,auto 100%;background-position:center,right center;background-repeat:no-repeat; }
+.sakura-roster-modal .roster-item[data-class='Cửu Linh']{--faction-image:url('/assets/cuu-linh.png')}
+.sakura-roster-modal .roster-item[data-class='Toái Mộng']{--faction-image:url('/assets/toai-mong.png')}
+.sakura-roster-modal .roster-item[data-class='Huyết Hà']{--faction-image:url('/assets/huyet-ha.png')}
+.sakura-roster-modal .roster-item[data-class='Long Ngâm']{--faction-image:url('/assets/long-ngam.png')}
+.sakura-roster-modal .roster-item[data-class='Thiết Y']{--faction-image:url('/assets/thiet-y.png')}
+.sakura-roster-modal .roster-item[data-class='Thần Tương']{--faction-image:url('/assets/than-tuong.png')}
+.sakura-roster-modal .roster-item[data-class='Tố Vấn']{--faction-image:url('/assets/to-van.png')}
+/* Improve readability on top of illustration and keep controls above image. */
+.sakura-roster-modal .roster-item .roster-info,.sakura-roster-modal .roster-item .roster-pick,.sakura-roster-modal .roster-item .roster-emblem{position:relative;z-index:1}
+.sakura-roster-modal .roster-item:after{display:none}
+body.dark-mode .v10-dialog.sakura-roster-modal {background-image:linear-gradient(180deg,rgba(40,29,48,.86),rgba(36,28,44,.96)),url('/assets/modal-background.png')}
+@media(max-width:600px){.sakura-roster-modal .roster-item{background-size:100% 100%,auto 100%;background-position:center,right center}}
