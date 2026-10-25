@@ -238,3 +238,146 @@ body.dark-mode .v10-dialog.sakura-roster-modal {
   letter-spacing: -0.6px;
 }
 
+/* =========================================
+   404 SAKURA - MOBILE DARK MODE FIX
+   ========================================= */
+
+/* Hỗ trợ các cách kích hoạt nền tối */
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) {
+  color-scheme: dark;
+  --mobile-dark-bg: #272536;
+  --mobile-dark-cell: #343246;
+  --mobile-dark-border: #60556f;
+  --mobile-dark-text: #f9eaf4;
+}
+
+/* Sửa màu bảng trong chế độ tối */
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td:not([class*="purple"]):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="pink"]) {
+  background: #343246 !important;
+  color: #f9eaf4 !important;
+  border-color: #60556f !important;
+}
+
+/* Ô Skill */
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.skill-cell {
+  background: #3d3449 !important;
+  color: #ffe0ef !important;
+}
+
+/* Giữ màu môn phái nhưng làm dịu nền */
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.purple {
+  background: #655084 !important;
+  color: #fff !important;
+}
+
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.blue {
+  background: #315c80 !important;
+  color: #fff !important;
+}
+
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.red {
+  background: #8a4754 !important;
+  color: #fff !important;
+}
+
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.green {
+  background: #466c5b !important;
+  color: #fff !important;
+}
+
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.yellow {
+  background: #79633c !important;
+  color: #fff !important;
+}
+
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.darkblue {
+  background: #435d9b !important;
+  color: #fff !important;
+}
+
+:is(
+  body.dark,
+  body.dark-mode,
+  body[data-theme="dark"],
+  html[data-theme="dark"]
+) .formation-v10 td.pink {
+  background: #874c78 !important;
+  color: #fff !important;
+}
+
+/* Bảng trên điện thoại */
+@media (max-width: 768px) {
+  .formation-v10 {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .formation-v10 table {
+    width: max-content;
+    min-width: 760px;
+    border-collapse: separate;
+    border-spacing: 3px;
+  }
+
+  .formation-v10 th,
+  .formation-v10 td {
+    min-width: 110px;
+    box-sizing: border-box;
+  }
+
+  .formation-v10 td {
+    min-height: 50px;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+}
+
+
