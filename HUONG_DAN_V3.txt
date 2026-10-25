@@ -1,5 +1,0 @@
-V3: Điểm danh được lưu trong Supabase attendance_entries và đồng bộ trực tiếp vào cửa sổ Thành Viên Tham Gia trên trang chủ (có nhãn ✓ Điểm danh). Danh sách gốc vẫn được giữ riêng. Nút Đồng bộ điểm danh tải lại dữ liệu. Bật/tắt nền sáng tối trên 3 trang.
-
-Cài đặt: chạy pubic/supabase-attendance.sql trên Supabase SQL Editor nếu chưa chạy; tải toàn bộ thư mục pubic lên GitHub và deploy Render. Kiểm tra đợt đang mở và chính sách RLS.
-
-Lưu ý: mục Thành Viên Tham Gia trên trang chủ chỉ hiện khi đã đăng nhập quản trị như trước. Nếu muốn khách xem danh sách hãy vào attendance.html.
