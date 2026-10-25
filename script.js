@@ -765,6 +765,36 @@ function moThanhVien() {
 
     const luoi = document.createElement("div");
     luoi.className = "tv-luoi";
+    // Điểm danh được lấy từ Supabase, không trộn vào danh sách thành viên gốc.
+    let diemDanh = Object.fromEntries(PHAI.map(phai => [phai, []]));
+    const trangThaiDD = document.createElement("p");
+    trangThaiDD.className = "tv-sync-status";
+    const nutTaiDD = document.createElement("button");
+    nutTaiDD.type = "button";
+    nutTaiDD.className = "tv-sync-button";
+    nutTaiDD.textContent = "↻ Đồng bộ điểm danh";
+    async function taiDiemDanh() {
+        nutTaiDD.disabled = true;
+        trangThaiDD.textContent = "Đang đồng bộ điểm danh từ Supabase…";
+        try {
+            const h = { apikey: SUPABASE_KEY };
+            const get = async (path) => {
+                const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, {headers:h, cache:"no-store"});
+                if (!res.ok) throw new Error("HTTP " + res.status + ": " + (await res.text()).slice(0,150));
+                return res.json();
+            };
+            const rounds = await get("attendance_rounds?select=id,title&is_active=eq.true&limit=1");
+            diemDanh = Object.fromEntries(PHAI.map(phai => [phai, []]));
+            if (rounds.length) {
+                const rows = await get("attendance_entries?select=ingame_name,class_name&round_id=eq." + encodeURIComponent(rounds[0].id) + "&limit=1000");
+                rows.forEach(r => { if (diemDanh[r.class_name]) diemDanh[r.class_name].push(r.ingame_name); });
+                trangThaiDD.textContent = "Đã đồng bộ " + rows.length + " lượt điểm danh · " + rounds[0].title + " (tên điểm danh có nhãn ✓)";
+            } else trangThaiDD.textContent = "Chưa có đợt điểm danh đang mở.";
+            veLai();
+        } catch(e) { trangThaiDD.textContent = "Không thể tải điểm danh: " + e.message; }
+        finally { nutTaiDD.disabled = false; }
+    }
+    nutTaiDD.addEventListener("click", taiDiemDanh);
 
     const loi = document.createElement("p");
     loi.className = "tv-loi";
@@ -957,8 +987,8 @@ function moThanhVien() {
     });
 
     function veLai() {
-        const tongSo = PHAI.reduce((n, p) => n + DANH_SACH[p].length, 0);
-        tong.textContent = tongSo + " thành viên · " + PHAI.length + " phái";
+        const tongSo = PHAI.reduce((n, p) => n + new Set([...DANH_SACH[p], ...diemDanh[p]].map(x=>x.toLocaleLowerCase("vi"))).size, 0);
+        tong.textContent = tongSo + " thành viên / điểm danh · " + PHAI.length + " phái";
         luoi.replaceChildren();
 
         PHAI.forEach(phai => {
@@ -972,12 +1002,12 @@ function moThanhVien() {
             tenText.textContent = phai;
             const dem = document.createElement("span");
             dem.className = "tv-dem";
-            dem.textContent = DANH_SACH[phai].length;
+            dem.textContent = new Set([...DANH_SACH[phai], ...diemDanh[phai]].map(x=>x.toLocaleLowerCase("vi"))).size;
             ten.append(tenText, dem);
 
             const ds = document.createElement("ul");
             ds.className = "tv-ds";
-            if (DANH_SACH[phai].length === 0) {
+            if (DANH_SACH[phai].length === 0 && diemDanh[phai].length === 0) {
                 const r = document.createElement("li");
                 r.className = "tv-rong";
                 r.textContent = "Chưa có thành viên. Nhập tên bên dưới để thêm.";
@@ -1003,6 +1033,15 @@ function moThanhVien() {
                 ds.appendChild(li);
             });
 
+            // Tên điểm danh hiển thị ngay trong bảng phái, không thêm trùng.
+            diemDanh[phai].forEach(ten => {
+                if (DANH_SACH[phai].some(x => x.toLocaleLowerCase("vi") === ten.toLocaleLowerCase("vi"))) return;
+                const li = document.createElement("li");
+                li.className = "tv-the tv-attendee";
+                const tenEl = document.createElement("span"); tenEl.textContent = ten;
+                const nhan = document.createElement("span"); nhan.className = "tv-attendee-badge"; nhan.textContent = "✓ Điểm danh";
+                li.append(tenEl, nhan); ds.appendChild(li);
+            });
             const them = document.createElement("div");
             them.className = "tv-them";
             const input = document.createElement("input");
@@ -1060,10 +1099,11 @@ function moThanhVien() {
     nutDong.addEventListener("click", () => nen.remove());
 
     hangDong.append(nutMau, nutDong);
-    hop.append(dau, moTa, api, thuCong, nhap, luoi, loi, hangDong);
+    hop.append(dau, moTa, nutTaiDD, trangThaiDD, api, thuCong, nhap, luoi, loi, hangDong);
     nen.appendChild(hop);
     document.body.appendChild(nen);
     veLai();
+    taiDiemDanh();
 }
 
 document.addEventListener("keydown", e => {
