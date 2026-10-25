@@ -82,4 +82,6 @@ if (btnClear) {
 // Nút Thành Viên Tham Gia đã được loại bỏ; không cần gắn sự kiện.
 const date=document.getElementById('war-date');if(date)date.onchange=async()=>{if(!admin)return;try{await api('/api/date',{method:'PUT',body:JSON.stringify({value:date.value})});note('✓ Đã lưu ngày bang chiến lên PostgreSQL')}catch(e){note('⚠ Không lưu được ngày: '+e.message);alert(e.message)}};
 (async()=>{try{admin=(await api('/api/me')).admin;paint();const savedDate=await api('/api/date');if(date)date.value=savedDate.value||''}catch(e){note(e.message)}await load()})();
+// Đồng bộ thay đổi điểm danh từ các thiết bị khác mỗi 15 giây.
+setInterval(()=>{if(!document.hidden&&!document.querySelector('.v10-modal'))load()},15000);
 })();
