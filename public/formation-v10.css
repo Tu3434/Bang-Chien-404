@@ -94,3 +94,119 @@ body.dark-mode .sakura-roster-modal{background:linear-gradient(150deg,#39273d,#2
   background:radial-gradient(circle at 90% 20%,#ffffffa0,transparent 30%);
   pointer-events:none;
 }
+.sakura-roster-modal .roster-item::after {display:none !important;}
+.sakura-roster-modal .roster-emblem {
+  display:grid !important;
+  flex:0 0 56px;
+  width:56px;height:56px;
+  border:2px solid #ffffffcc;
+  border-radius:17px;
+  background:var(--ink);
+  color:#fff;
+  box-shadow:0 4px 14px #00000022;
+  position:relative;z-index:1;
+}
+.sakura-roster-modal .roster-info {
+  position:relative;z-index:1;
+  display:flex;
+  flex:1;
+  min-width:0;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.sakura-roster-modal .roster-info strong {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  padding:11px 23px;
+  border:2px solid #ffffffeb;
+  border-radius:17px;
+  background:linear-gradient(145deg,#fffffff2,#ffffffc9);
+  color:var(--ink);
+  font-size:clamp(16px,2vw,21px);
+  font-weight:850;
+  line-height:1.25;
+  letter-spacing:.1px;
+  text-align:center;
+  overflow-wrap:anywhere;
+  box-shadow:0 0 0 1px var(--line),0 6px 18px #29202a1a;
+  backdrop-filter:blur(6px);
+}
+.sakura-roster-modal .roster-tag {
+  display:inline-flex;
+  flex:0 1 auto;
+  border:1px solid #ffffff9c;
+  background:#ffffff80;
+  color:var(--ink);
+  font-weight:750;
+  font-size:12px;
+  padding:6px 11px;
+  border-radius:999px;
+}
+.sakura-roster-modal .roster-pick {
+  position:relative;z-index:1;
+  margin-left:auto !important;
+  flex-shrink:0;
+  min-height:43px;
+  padding:10px 17px !important;
+  background:#ffffffd9 !important;
+  border:1px solid var(--line) !important;
+  color:var(--ink) !important;
+  border-radius:13px !important;
+  box-shadow:0 3px 12px #00000012;
+}
+.sakura-roster-modal .roster-item.roster-occupied {opacity:.76;}
+body.dark-mode .v10-dialog.sakura-roster-modal {
+  background:linear-gradient(150deg,#39273d,#292335) !important;
+  color:#f9e7f1;
+}
+body.dark-mode .sakura-roster-modal .roster-item {
+  background:linear-gradient(115deg,var(--c1),var(--c2)) !important;
+}
+@media(max-width:600px) {
+  .sakura-roster-modal .roster-item {min-height:78px;gap:8px;padding:10px;}
+  .sakura-roster-modal .roster-emblem {flex-basis:38px;width:38px;height:38px;border-radius:12px;font-size:20px;}
+  .sakura-roster-modal .roster-info {gap:5px;}
+  .sakura-roster-modal .roster-info strong {font-size:14px;padding:8px 10px;border-radius:11px;}
+  .sakura-roster-modal .roster-tag {font-size:10px;padding:4px 7px;}
+  .sakura-roster-modal .roster-pick {padding:8px 10px !important;min-height:36px;font-size:12px;}
+}
+
+
+/* V25 - NEN POPUP DUC, KHONG TRONG SUOT */
+.v10-modal:has(.sakura-roster-modal) {
+  background: rgba(25, 17, 32, .72) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.v10-dialog.sakura-roster-modal,
+body.dark-mode .v10-dialog.sakura-roster-modal {
+  opacity: 1 !important;
+  background: #fff7fb !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: #663252 !important;
+}
+.sakura-roster-modal .roster-item {
+  opacity: 1 !important;
+  background: var(--c2, #fff0f7) !important;
+  background-image: none !important;
+}
+.sakura-roster-modal .roster-item::before { display:none !important; }
+.sakura-roster-modal .roster-info strong {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.sakura-roster-modal .roster-tag,
+.sakura-roster-modal .roster-pick {
+  background: #fff !important;
+  backdrop-filter: none !important;
+}
+.sakura-roster-modal .roster-search input { background: #fff !important; }
