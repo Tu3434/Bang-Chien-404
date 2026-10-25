@@ -11,3 +11,5 @@
 .att-group[data-class="Thiết Y"]{border-color:#ffe29c}.att-group[data-class="Thiết Y"] h3{background:#ffe29c;color:#503b1b}
 .att-group[data-class="Thần Tương"]{border-color:#4f78d0}.att-group[data-class="Thần Tương"] h3{background:#4f78d0;color:white}
 .att-group[data-class="Tố Vấn"]{border-color:#f6c5e9}.att-group[data-class="Tố Vấn"] h3{background:#f6c5e9;color:#572f48}
+
+.att-group li{display:flex;justify-content:space-between;align-items:center;gap:8px}.att-delete{background:#ffe3eb;color:#9e2454;border:1px solid #f7b3c9;border-radius:9px;padding:5px 10px;cursor:pointer;font:inherit;font-size:12px;font-weight:700}.att-delete:hover{background:#ffc8d9}
