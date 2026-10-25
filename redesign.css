@@ -45,3 +45,9 @@ html[data-theme=dark] .formation tbody tr:nth-child(even) td:not([class]){backgr
 @media(max-width:900px){body{padding:12px}.topbar{padding:20px;border-radius:22px;min-height:110px}.hero-mascot{font-size:28px;min-width:50px}.toolbar{padding:14px}.toolbar-actions{margin-left:0;width:100%}.formation-grid{grid-template-columns:1fr}.formation h2{font-size:17px}.formation h2 small{display:none}.formation-wide table{min-width:760px}.formation-grid table{min-width:510px}}
 @media(max-width:600px){body{padding:7px}.topbar{gap:10px;padding:15px;min-height:95px}.brand-mark{width:55px;height:55px;font-size:19px;border-radius:17px}.brand-copy h1{font-size:21px}.subtitle{font-size:10px}.hero-mascot{display:none}.toolbar .toolbar-actions button,.toolbar .toolbar-actions a,.theme-switch{flex:1 1 135px;font-size:11px;min-height:43px}.formation{border-radius:17px}.formation h2{padding:14px}.table-wrap{padding:5px}.formation-wide table{min-width:690px}.formation-grid table{min-width:460px}footer{font-size:10px}}
 @media print{body{background:white}.toolbar,.hero-mascot{display:none}.formation{box-shadow:none;break-inside:avoid}}
+
+/* V13: HTML hidden must override toolbar display styles. */
+[hidden], .toolbar .toolbar-actions [hidden] { display: none !important; }
+.v10-modal { z-index: 99999; }
+.v10-dialog input { display:block; width:100%; box-sizing:border-box; margin:10px 0; padding:12px; border:1px solid #efafca; border-radius:10px; }
+.v10-dialog .msg { color:#a92c53; white-space:pre-wrap; }
