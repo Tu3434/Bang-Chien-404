@@ -12,7 +12,7 @@ async function optionalAuth(req){const t=req.cookies.admin_session;if(!t)return 
 app.post('/api/login',limiter,async(req,res)=>{try{const {email,password}=req.body||{};const r=await pool.query('SELECT * FROM admins WHERE email=$1',[String(email||'').toLowerCase()]);if(!r.rowCount||!await bcrypt.compare(String(password||''),r.rows[0].password_hash))return res.status(401).json({error:'Email hoặc mật khẩu không đúng'});const token=random();await pool.query('INSERT INTO sessions(token_hash,admin_id,expires_at) VALUES($1,$2,now()+interval \'7 days\')',[sha(token),r.rows[0].id]);res.cookie('admin_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',maxAge:7*86400000,path:'/'}).json({ok:true})}catch(e){sendError(res,e)}});
 app.get('/api/me',async(req,res)=>{try{res.json({admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
 app.post('/api/logout',async(req,res)=>{try{if(req.cookies.admin_session)await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sha(req.cookies.admin_session)]);res.clearCookie('admin_session',{path:'/'}).json({ok:true})}catch(e){sendError(res,e)}});
-async function round(){const r=await pool.query('SELECT id,title FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1');return r.rows[0]}
+async function round(){const r=await pool.query("SELECT id,title,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1");return r.rows[0]}
 app.get('/api/attendance',async(req,res)=>{try{const active=await round();const entries=active?(await pool.query('SELECT id,character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at ASC',[active.id])).rows:[];res.json({round:active,entries,admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
 app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);await pool.query('INSERT INTO attendance_registration_history(attendance_id,round_id,character_name,class_name) VALUES($1,$2,$3,$4) ON CONFLICT(attendance_id) DO NOTHING',[r.rows[0].id,active.id,name,phai]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
 app.delete('/api/attendance/:id',limiter,async(req,res)=>{
@@ -65,31 +65,34 @@ app.put('/api/formation/:key',auth,async(req,res)=>{let client;try{
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 app.delete('/api/formation',auth,async(req,res)=>{try{await pool.query('DELETE FROM formation_cells');res.json({ok:true})}catch(e){sendError(res,e)}});
 app.get('/api/date',async(req,res)=>{try{const r=await pool.query("SELECT value FROM app_settings WHERE key='war_date'");res.json({value:r.rows[0]?.value||'26/09'})}catch(e){sendError(res,e)}});
-// The selected battle date is the match identifier; switching dates opens a fresh weekly roster.
-app.put('/api/date',auth,async(req,res)=>{let client;try{
- const value=String(req.body?.value||'').trim();
- const match=/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/.exec(value);
- if(!match)return res.status(400).json({error:'Ngày bang chiến phải là DD/MM hoặc DD/MM/YYYY'});
- const day=Number(match[1]),month=Number(match[2]),year=Number(match[3]||new Date().getFullYear());
- const dt=new Date(Date.UTC(year,month-1,day));
- if(dt.getUTCFullYear()!==year||dt.getUTCMonth()!==month-1||dt.getUTCDate()!==day)return res.status(400).json({error:'Ngày bang chiến không hợp lệ'});
- const iso=dt.toISOString().slice(0,10);
+// Date displayed on the formation page is read-only with respect to round creation.
+app.put('/api/date',auth,async(req,res)=>res.status(403).json({error:'Hãy tạo trận mới tại trang Điểm danh'}));
+// One-time, idempotent migration: associate existing registrations with the current week's match.
+async function ensureCurrentMatch(){
+ const client=await pool.connect();try{await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const r=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
+ if(r.rowCount&&!r.rows[0].match_date){
+  await client.query("UPDATE attendance_rounds SET title='Bang chiến',match_date=DATE '2026-10-25' WHERE id=$1",[r.rows[0].id]);
+  await client.query("INSERT INTO app_settings(key,value) VALUES('war_date','25/10') ON CONFLICT(key) DO UPDATE SET value='25/10'");
+ }
+ await client.query('COMMIT');}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+}
+app.post('/api/attendance/rounds',auth,async(req,res)=>{let client;try{
+ const date=String(req.body?.date||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return res.status(400).json({error:'Ngày không hợp lệ'});
+ const dt=new Date(date+'T00:00:00Z');if(!Number.isFinite(dt.valueOf())||dt.toISOString().slice(0,10)!==date)return res.status(400).json({error:'Ngày không hợp lệ'});
  client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
  const old=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
- if(old.rowCount&&!old.rows[0].match_date){
-  const previous=await client.query("SELECT value FROM app_settings WHERE key='war_date'");
-  const prev=/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/.exec(previous.rows[0]?.value||'');
-  if(prev){const pdt=new Date(Date.UTC(Number(prev[3]||year),Number(prev[2])-1,Number(prev[1])));if(!Number.isNaN(pdt.valueOf()))await client.query('UPDATE attendance_rounds SET match_date=$1 WHERE id=$2',[pdt.toISOString().slice(0,10),old.rows[0].id]);}
- }
- const active=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true LIMIT 1');
- if(!active.rowCount||(active.rows[0].match_date instanceof Date?active.rows[0].match_date.toISOString().slice(0,10):String(active.rows[0].match_date).slice(0,10))!==iso){
-  await client.query('UPDATE attendance_rounds SET is_active=false WHERE is_active=true');
-  const existing=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1 LIMIT 1',[iso]);
-  if(existing.rowCount)await client.query('UPDATE attendance_rounds SET is_active=true WHERE id=$1',[existing.rows[0].id]);
-  else await client.query('INSERT INTO attendance_rounds(title,is_active,match_date) VALUES($1,true,$2)', ['Bang chiến '+value,iso]);
- }
- await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[value]);
- await client.query('COMMIT');res.json({ok:true,value});
+ if(old.rowCount){const previous=old.rows[0].match_date;const oldDate=previous instanceof Date?previous.toISOString().slice(0,10):String(previous||'').slice(0,10);
+ if(oldDate===date){await client.query('ROLLBACK');return res.status(409).json({error:'Ngày này đã là trận đang mở'});}
+ if(oldDate&&date<oldDate){await client.query('ROLLBACK');return res.status(400).json({error:'Ngày trận mới phải sau trận hiện tại'});}}
+ const exists=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1',[date]);
+ if(exists.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Trận này đã tồn tại trong lịch sử'});}
+ await client.query('UPDATE attendance_rounds SET is_active=false WHERE is_active=true');
+ const fresh=await client.query("INSERT INTO attendance_rounds(title,is_active,match_date) VALUES('Bang chiến',true,$1) RETURNING id",[date]);
+ const parts=date.split('-');await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[parts[2]+'/'+parts[1]]);
+ // Never carry player assignments into a new match; skill cells stay intact.
+ await client.query("DELETE FROM formation_cells WHERE cell_key LIKE '%:name'");
+ await client.query('COMMIT');res.status(201).json({ok:true,id:fresh.rows[0].id,date});
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 
 app.get('/api/attendance/history',auth,async(req,res)=>{try{
@@ -106,5 +109,5 @@ app.get('/api/attendance/history/:id',auth,async(req,res)=>{try{
  res.json({round:r.rows[0],entries});
  }catch(e){sendError(res,e)}});
 app.use(express.static(path.join(__dirname,'public'),{index:'index.html'}));app.get('/health',(_,res)=>res.json({ok:true}));
-async function init(){await pool.query(fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8'));const email=process.env.ADMIN_EMAIL?.trim().toLowerCase(),pass=process.env.ADMIN_PASSWORD;if(email&&pass){if(pass.length<12)throw Error('ADMIN_PASSWORD must have at least 12 characters');const existing=await pool.query('SELECT id FROM admins WHERE email=$1',[email]);if(!existing.rowCount){await pool.query('INSERT INTO admins(email,password_hash) VALUES($1,$2)',[email,await bcrypt.hash(pass,12)]);console.log('Admin account created')}}else console.warn('Set ADMIN_EMAIL and ADMIN_PASSWORD in Render Environment');app.listen(process.env.PORT||3000,()=>console.log('404 Sakura V12 ready'))}
+async function init(){await pool.query(fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8'));await ensureCurrentMatch();const email=process.env.ADMIN_EMAIL?.trim().toLowerCase(),pass=process.env.ADMIN_PASSWORD;if(email&&pass){if(pass.length<12)throw Error('ADMIN_PASSWORD must have at least 12 characters');const existing=await pool.query('SELECT id FROM admins WHERE email=$1',[email]);if(!existing.rowCount){await pool.query('INSERT INTO admins(email,password_hash) VALUES($1,$2)',[email,await bcrypt.hash(pass,12)]);console.log('Admin account created')}}else console.warn('Set ADMIN_EMAIL and ADMIN_PASSWORD in Render Environment');app.listen(process.env.PORT||3000,()=>console.log('404 Sakura V12 ready'))}
 init().catch(e=>{console.error('Startup error:',e);process.exit(1)});
