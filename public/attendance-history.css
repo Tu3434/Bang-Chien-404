@@ -35,3 +35,13 @@ body.dark .history-round:not(.selected){background:#3c3249;color:#f7d8e9;border-
 .history-reopen:hover{background:#d52c81}.history-reopen:disabled{opacity:.55;cursor:wait}
 .history-active-label{font-weight:700;color:#24835e;font-size:13px}
 body.dark .history-active-label{color:#91e7b9}
+
+/* V30.8: admin controls, Vietnamese typography */
+.history-admin-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.history-admin-actions button{font:700 13px/1.35 "Segoe UI",Arial,sans-serif;border:1px solid #f2afd0;border-radius:10px;padding:9px 11px;cursor:pointer}
+.history-edit-date,.history-save-date{background:#fff0f7;color:#a72564}
+.history-delete-round{background:#fff1f2;color:#b42343}
+.history-cancel-date{background:#fff;color:#7b526a}
+.history-date-input{width:135px;min-width:0;border:1px solid #ed9bc2;border-radius:10px;padding:9px 10px;background:#fff;color:#77274f;font:600 14px "Segoe UI",Arial,sans-serif}
+.history-admin-actions [hidden]{display:none!important}
+body.dark .history-admin-actions button,body.dark .history-date-input{background:#403149;color:#ffe5f1;border-color:#97617f}

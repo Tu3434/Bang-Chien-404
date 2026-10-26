@@ -146,6 +146,36 @@ app.patch('/api/attendance/:id/name',auth,async(req,res)=>{let client;try{
  await client.query('COMMIT');res.json({ok:true,id,name});
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Tên này đã được đăng ký'});sendError(res,e)}finally{if(client)client.release()}});
 
+// V30.8: edit dates for archived matches; no registrations are altered.
+app.patch('/api/attendance/rounds/:id/date',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id),date=String(req.body?.date||'');
+ if(!Number.isSafeInteger(id)||id<1||!/^\d{4}-\d{2}-\d{2}$/.test(date))return res.status(400).json({error:'Ngày hoặc trận không hợp lệ'});
+ const parsed=new Date(date+'T00:00:00Z');
+ if(!Number.isFinite(parsed.valueOf())||parsed.toISOString().slice(0,10)!==date)return res.status(400).json({error:'Ngày không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const found=await client.query('SELECT id,is_active FROM attendance_rounds WHERE id=$1 FOR UPDATE',[id]);
+ if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy trận'});}
+ if(found.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Hãy sửa ngày trận đang mở ở trang Điểm danh'});}
+ const duplicate=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1 AND id<>$2',[date,id]);
+ if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Ngày này đã thuộc một trận khác'});}
+ await client.query('UPDATE attendance_rounds SET match_date=$1 WHERE id=$2',[date,id]);
+ await client.query('COMMIT');res.json({ok:true,id,date});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Ngày này đã tồn tại'});sendError(res,e)}finally{if(client)client.release()}});
+
+// V30.8: remove only empty archived matches; protect all registration records.
+app.delete('/api/attendance/rounds/:id',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const found=await client.query('SELECT id,is_active FROM attendance_rounds WHERE id=$1 FOR UPDATE',[id]);
+ if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy trận'});}
+ if(found.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Không thể xóa trận đang mở. Hãy mở trận khác trước'});}
+ const entries=await client.query('SELECT 1 FROM attendance_entries WHERE round_id=$1 LIMIT 1',[id]);
+ const history=await client.query('SELECT 1 FROM attendance_registration_history WHERE round_id=$1 LIMIT 1',[id]);
+ if(entries.rowCount||history.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Trận này đã có dữ liệu đăng ký. Để tránh mất lịch sử, hệ thống chỉ cho xóa trận trống'});}
+ await client.query('DELETE FROM attendance_rounds WHERE id=$1',[id]);
+ await client.query('COMMIT');res.json({ok:true,id});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+
 app.get('/api/attendance/history',auth,async(req,res)=>{try{
  const rounds=(await pool.query(`SELECT r.id,r.title,to_char(r.match_date,'DD/MM/YYYY') AS match_date,r.is_active,
  COUNT(h.id)::int AS total FROM attendance_rounds r LEFT JOIN attendance_registration_history h ON h.round_id=r.id

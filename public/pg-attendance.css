@@ -66,3 +66,6 @@ body.dark #att-list .att-empty {color:#e1d3df}
 #att-list .att-member .att-edit{flex:0 0 auto;border:1px solid #d9b3f2;background:#f4e7ff;color:#7a328f;padding:6px 8px;border-radius:8px;font-weight:800;cursor:pointer;font-size:12px}
 #att-list .att-member .att-edit:hover{background:#e9d1ff}
 #att-list .att-member{flex-wrap:wrap}
+
+/* V30.8: keep Vietnamese glyphs readable in participant cards */
+body,button,input,select,textarea{font-family:"Segoe UI",Arial,sans-serif!important}
