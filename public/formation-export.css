@@ -1,0 +1,3 @@
+/* V30.9: nút xuất PNG; không thay đổi giao diện bảng đội hình */
+#btn-export-png{background:linear-gradient(135deg,#f45b9e,#e9408b);color:white;border:1px solid #ef70a9;border-radius:12px;padding:11px 17px;font-family:'Be Vietnam Pro','Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 5px 13px #e8498b25;white-space:nowrap}
+#btn-export-png:hover{filter:brightness(1.05)}#btn-export-png:focus-visible{outline:3px solid #b93579;outline-offset:2px}#btn-export-png:disabled{opacity:.65;cursor:wait}
