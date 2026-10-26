@@ -1,1 +1,63 @@
 #att-list .att-class-card{border:1px solid #f1c3d8;border-radius:14px;overflow:hidden;background:white;min-width:0}#att-list .att-class-head{padding:12px;display:flex;justify-content:space-between;font-weight:800;background:#f6c6e8}#att-list .att-class-card:nth-child(1) .att-class-head{background:#b7a9d7}#att-list .att-class-card:nth-child(2) .att-class-head{background:#b9e1f7}#att-list .att-class-card:nth-child(3) .att-class-head{background:#ef9ca5}#att-list .att-class-card:nth-child(4) .att-class-head{background:#b7d9ab}#att-list .att-class-card:nth-child(5) .att-class-head{background:#ffe3a0}#att-list .att-class-card:nth-child(6) .att-class-head{background:#507bd2;color:white}#att-list .att-class-card:nth-child(7) .att-class-head{background:#f6c6e8}#att-list .att-class-body{padding:10px;min-height:130px}#att-list .att-member{display:flex;align-items:center;justify-content:space-between;gap:4px;margin:5px 0;padding:6px;background:#fff7fb;border-radius:9px}#att-list .att-member-info{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}#att-list .att-member small{font-size:10px;color:#777}#att-list .att-delete{padding:5px 8px;border-radius:7px;background:#ffe0eb;color:#bd245a;border:0;cursor:pointer}#att-list .att-empty{font-size:12px;color:#8e8193}
+
+/* Sakura V30.2 — Thẻ điểm danh đồng bộ giao diện Lịch sử đăng ký */
+#att-list .att-class-card {
+  --phai-head:#f6c6e8;
+  --phai-ink:#8b315f;
+  --phai-soft:#fff0f8;
+  --phai-border:#f4c4de;
+  border:1.5px solid var(--phai-head);
+  border-radius:14px;
+  background:#fff;
+  overflow:hidden;
+  min-width:0;
+  box-shadow:0 5px 14px #b4547912;
+}
+#att-list .att-class-card[data-class="Cửu Linh"] {--phai-head:#b7a9d7;--phai-ink:#39265d;--phai-soft:#f3edfb;--phai-border:#d5c6f2}
+#att-list .att-class-card[data-class="Toái Mộng"] {--phai-head:#b9e1f7;--phai-ink:#21567e;--phai-soft:#eaf7ff;--phai-border:#c4e7ff}
+#att-list .att-class-card[data-class="Huyết Hà"] {--phai-head:#ef9ca5;--phai-ink:#78283a;--phai-soft:#fff0f1;--phai-border:#ffc0c7}
+#att-list .att-class-card[data-class="Long Ngâm"] {--phai-head:#b7d9ab;--phai-ink:#2c5b38;--phai-soft:#eff9ea;--phai-border:#cde7c2}
+#att-list .att-class-card[data-class="Thiết Y"] {--phai-head:#ffe3a0;--phai-ink:#75500d;--phai-soft:#fff8e6;--phai-border:#ffe6a7}
+#att-list .att-class-card[data-class="Thần Tương"] {--phai-head:#507bd2;--phai-ink:#244f9e;--phai-soft:#eaf0ff;--phai-border:#9cb7ff}
+#att-list .att-class-card[data-class="Tố Vấn"] {--phai-head:#f6c6e8;--phai-ink:#973978;--phai-soft:#fff0fa;--phai-border:#f8cde9}
+#att-list .att-class-card .att-class-head,
+#att-list .att-class-card:nth-child(n) .att-class-head {
+  background:var(--phai-head);
+  color:var(--phai-ink);
+  padding:12px 13px;
+  font-weight:900;
+  line-height:1.35;
+}
+#att-list .att-class-card[data-class="Thần Tương"] .att-class-head {color:#fff}
+#att-list .att-class-body {padding:7px 9px 12px;min-height:130px}
+#att-list .att-member {
+  background:var(--phai-soft);
+  border:1px solid var(--phai-border);
+  border-radius:10px;
+  margin:7px 0;
+  padding:10px 9px;
+  min-height:62px;
+  gap:7px;
+  align-items:center;
+}
+#att-list .att-member-info {flex:1;min-width:0;gap:4px;color:var(--phai-ink)}
+#att-list .att-member-info strong {font-weight:900;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+#att-list .att-member small {font-size:10px;line-height:1.3;color:var(--phai-ink);opacity:.76}
+#att-list .att-member .att-delete {
+  flex:0 0 auto;
+  border:1px solid #f6c5d9;
+  background:#ffe1ec;
+  color:#bd245a;
+  padding:6px 9px;
+  border-radius:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+#att-list .att-member .att-delete:hover {background:#ffcddd}
+/* Dark mode: giữ màu phái, dùng nền thẻ đặc để đọc rõ */
+body.dark #att-list .att-class-card {background:#302b40}
+body.dark #att-list .att-member {background:color-mix(in srgb,var(--phai-soft) 17%,#302b40);border-color:color-mix(in srgb,var(--phai-border) 55%,#51445a)}
+body.dark #att-list .att-member-info,
+body.dark #att-list .att-member small {color:#fff0f8;opacity:1}
+body.dark #att-list .att-empty {color:#e1d3df}
+@media(max-width:850px){#att-list .att-class-body{min-height:80px}#att-list .att-member{min-height:58px}}
