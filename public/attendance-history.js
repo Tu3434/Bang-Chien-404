@@ -1,16 +1,16 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),open=$('history-open'),dialog=$('history-dialog'),rounds=$('history-rounds'),detail=$('history-detail');
 if(!open||!dialog)return;
-async function get(url){const r=await fetch(url,{credentials:'same-origin'}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
+async function get(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
 function node(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x}
 let selectedRoundId=null;
-async function post(url){const r=await fetch(url,{method:'POST',credentials:'same-origin'}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
+async function post(url){const r=await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store'}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
 async function showRound(id){selectedRoundId=id;detail.replaceChildren(node('p','','Đang tải danh sách…'));try{
  const d=await get('/api/attendance/history/'+id);if(selectedRoundId!==id)return;
  detail.replaceChildren();const header=node('div','history-match-heading');header.append(node('h3','',`${d.round.match_date||'Chưa rõ ngày'} · ${d.round.title}`));
  if(!d.round.is_active){const reopen=node('button','history-reopen','↻ Mở lại trận này');reopen.type='button';reopen.onclick=async()=>{
   if(!confirm(`Mở lại trận ${d.round.match_date}? Trận đang mở sẽ tạm kết thúc; đội hình xóa tên nhưng giữ Skill. Dữ liệu đăng ký của cả hai trận vẫn được giữ.`))return;
-  reopen.disabled=true;try{await post('/api/attendance/rounds/'+id+'/reopen');await show();document.dispatchEvent(new Event('attendance-round-changed'));}
+  reopen.disabled=true;try{const result=await post('/api/attendance/rounds/'+id+'/reopen');dialog.close();document.dispatchEvent(new Event('attendance-round-changed'));window.location.reload();}
   catch(e){alert('Không thể mở lại trận: '+e.message);reopen.disabled=false;}
  };header.append(reopen)}else header.append(node('span','history-active-label','● Đang mở'));
  detail.append(header);

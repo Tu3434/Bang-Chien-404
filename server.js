@@ -13,7 +13,7 @@ app.post('/api/login',limiter,async(req,res)=>{try{const {email,password}=req.bo
 app.get('/api/me',async(req,res)=>{try{res.json({admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
 app.post('/api/logout',async(req,res)=>{try{if(req.cookies.admin_session)await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sha(req.cookies.admin_session)]);res.clearCookie('admin_session',{path:'/'}).json({ok:true})}catch(e){sendError(res,e)}});
 async function round(){const r=await pool.query("SELECT id,title,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1");return r.rows[0]}
-app.get('/api/attendance',async(req,res)=>{try{const active=await round();const entries=active?(await pool.query('SELECT id,character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at ASC',[active.id])).rows:[];res.json({round:active,entries,admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
+app.get('/api/attendance',async(req,res)=>{try{res.set('Cache-Control','no-store, no-cache, must-revalidate');const active=await round();const entries=active?(await pool.query('SELECT id,character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at ASC',[active.id])).rows:[];res.json({round:active,entries,admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
 app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);await pool.query('INSERT INTO attendance_registration_history(attendance_id,round_id,character_name,class_name) VALUES($1,$2,$3,$4) ON CONFLICT(attendance_id) DO NOTHING',[r.rows[0].id,active.id,name,phai]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
 app.delete('/api/attendance/:id',limiter,async(req,res)=>{
  let client;
@@ -108,7 +108,7 @@ app.post('/api/attendance/rounds/:id/reopen',auth,async(req,res)=>{let client;tr
  if(date){const v=date instanceof Date?date.toISOString().slice(0,10):String(date).slice(0,10);const [y,m,d]=v.split('-');await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[d+'/'+m]);}
  // Previous lineup is not transferable between rounds; skills remain untouched.
  await client.query("DELETE FROM formation_cells WHERE cell_key LIKE '%:name'");
- await client.query('COMMIT');res.json({ok:true,id});
+ await client.query('COMMIT');const restored=await pool.query('SELECT count(*)::int AS total FROM attendance_entries WHERE round_id=$1',[id]);res.json({ok:true,id,restored:restored.rows[0].total});
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 
 // V30.4: admin-only rename of an active registration, its history and matching lineup cells.
