@@ -1,1 +1,29 @@
 #history-open[hidden]{display:none!important}#history-open{background:#fff0f8;color:#a82764;border:1px solid #ffabd2;border-radius:12px;padding:12px 16px;font-weight:750;cursor:pointer}.history-dialog{width:min(1100px,94vw);max-height:85dvh;overflow:auto;border:1px solid #f5afd1;border-radius:24px;background:#fff8fc;color:#692747;padding:24px;box-shadow:0 22px 80px #49203955}.history-dialog::backdrop{background:#21162bc2}.history-top{display:flex;align-items:center;justify-content:space-between;gap:16px}.history-top h2{margin:0;color:#a32660}.history-top button{background:#ffe2f0;border:0;border-radius:50%;padding:12px;cursor:pointer}.history-hint{color:#886b7c}.history-layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:18px}.history-rounds{display:flex;flex-direction:column;gap:8px}.history-round{padding:12px;text-align:left;border:1px solid #f7bad7;border-radius:12px;background:white;color:#813a63;cursor:pointer}.history-round.selected{background:#f34f9d;color:white}.history-detail{min-width:0}.history-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.history-class{background:#fff;border:1px solid #f3c6da;border-radius:12px;overflow:hidden;padding:10px}.history-class h4{margin:0 0 10px;color:#ad286b}.history-person{display:flex;flex-direction:column;gap:3px;background:#fff2f8;border-radius:9px;padding:8px;margin-bottom:5px;overflow-wrap:anywhere}.history-person small,.history-empty{color:#997a8b;font-size:12px}.history-deleted{color:#a13d52;font-size:11px}.history-dialog[open]{display:block}@media(max-width:650px){.history-dialog{padding:14px;width:96vw}.history-layout{grid-template-columns:1fr}.history-rounds{flex-direction:row;overflow:auto}.history-round{min-width:165px}.history-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* V30.1 — Class colors matched to attendance page */
+.history-grid{gap:12px;align-items:stretch}
+.history-class{--faction:#f6c6e8;--faction-text:#672b58;--faction-soft:#fff1f8;border:1.5px solid var(--faction);border-radius:14px;padding:0;background:#fff;overflow:hidden;min-width:0;box-shadow:0 5px 14px #b4547920}
+.history-class h4{margin:0;padding:12px 13px;background:var(--faction);color:var(--faction-text);font-size:14px;font-weight:900;line-height:1.35}
+.history-class .history-person{margin:7px 9px;background:var(--faction-soft);border:1px solid color-mix(in srgb,var(--faction) 50%,transparent);border-radius:10px;padding:10px 11px;gap:5px;color:var(--faction-text)}
+.history-class .history-person strong{font-weight:850;line-height:1.35;overflow-wrap:anywhere}
+.history-class .history-person small{color:color-mix(in srgb,var(--faction-text) 68%,#777);font-size:11px}
+.history-class .history-empty{padding:15px 10px;margin:0;color:#907a8a}
+.history-class:nth-child(1){--faction:#b7a9d7;--faction-text:#39265d;--faction-soft:#f3edfb}
+.history-class:nth-child(2){--faction:#b9e1f7;--faction-text:#21567e;--faction-soft:#eaf7ff}
+.history-class:nth-child(3){--faction:#ef9ca5;--faction-text:#78283a;--faction-soft:#fff0f1}
+.history-class:nth-child(4){--faction:#b7d9ab;--faction-text:#2c5b38;--faction-soft:#eff9ea}
+.history-class:nth-child(5){--faction:#ffe3a0;--faction-text:#75500d;--faction-soft:#fff8e6}
+.history-class:nth-child(6){--faction:#507bd2;--faction-text:#fff;--faction-soft:#eaf0ff}
+.history-class:nth-child(6) .history-person{color:#284e9c}
+.history-class:nth-child(6) .history-person small{color:#667da6}
+.history-class:nth-child(7){--faction:#f6c6e8;--faction-text:#8d3a78;--faction-soft:#fff0fa}
+.history-dialog{background:#fff8fc}
+body.dark .history-dialog{background:#282437;color:#f8e8f2;border-color:#75576e}
+body.dark .history-class{background:#332c40}
+body.dark .history-class .history-person{background:color-mix(in srgb,var(--faction) 23%,#2b2538);color:#fff0f8;border-color:color-mix(in srgb,var(--faction) 45%,#50425b)}
+body.dark .history-class .history-person small{color:#dfcddd}
+body.dark .history-class .history-empty{color:#d3bacc}
+body.dark .history-detail h3{color:#ffb7d9}
+body.dark .history-round:not(.selected){background:#3c3249;color:#f7d8e9;border-color:#75576e}
+@media(max-width:650px){.history-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.history-class h4{padding:10px;font-size:13px}.history-class .history-person{margin:6px;padding:8px;font-size:12px}}
+@media(max-width:370px){.history-grid{grid-template-columns:1fr}}
