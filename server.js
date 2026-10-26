@@ -14,7 +14,7 @@ app.get('/api/me',async(req,res)=>{try{res.json({admin:await optionalAuth(req)})
 app.post('/api/logout',async(req,res)=>{try{if(req.cookies.admin_session)await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sha(req.cookies.admin_session)]);res.clearCookie('admin_session',{path:'/'}).json({ok:true})}catch(e){sendError(res,e)}});
 async function round(){const r=await pool.query('SELECT id,title FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1');return r.rows[0]}
 app.get('/api/attendance',async(req,res)=>{try{const active=await round();const entries=active?(await pool.query('SELECT id,character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at ASC',[active.id])).rows:[];res.json({round:active,entries,admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
-app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
+app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);await pool.query('INSERT INTO attendance_registration_history(attendance_id,round_id,character_name,class_name) VALUES($1,$2,$3,$4) ON CONFLICT(attendance_id) DO NOTHING',[r.rows[0].id,active.id,name,phai]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
 app.delete('/api/attendance/:id',limiter,async(req,res)=>{
  let client;
  try{
@@ -32,6 +32,7 @@ app.delete('/api/attendance/:id',limiter,async(req,res)=>{
    :await client.query('DELETE FROM attendance_entries WHERE id=$1 AND owner_hash=$2 RETURNING character_name,round_id',[id,sha(secret)]);
   if(!removed.rowCount){await client.query('ROLLBACK');return res.status(403).json({error:'Không có quyền xóa hoặc tên không tồn tại'});}
   const {character_name,round_id}=removed.rows[0];
+  await client.query('UPDATE attendance_registration_history SET deleted_at=now() WHERE attendance_id=$1',[id]);
   // Keep the formation entry only if the same character is still registered in the active round.
   const remaining=await client.query(`SELECT 1 FROM attendance_entries e JOIN attendance_rounds r ON r.id=e.round_id WHERE r.is_active=true AND lower(btrim(e.character_name))=lower(btrim($1)) LIMIT 1`,[character_name]);
   let cleared=0;
@@ -64,7 +65,46 @@ app.put('/api/formation/:key',auth,async(req,res)=>{let client;try{
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 app.delete('/api/formation',auth,async(req,res)=>{try{await pool.query('DELETE FROM formation_cells');res.json({ok:true})}catch(e){sendError(res,e)}});
 app.get('/api/date',async(req,res)=>{try{const r=await pool.query("SELECT value FROM app_settings WHERE key='war_date'");res.json({value:r.rows[0]?.value||'26/09'})}catch(e){sendError(res,e)}});
-app.put('/api/date',auth,async(req,res)=>{try{const value=String(req.body?.value||'').trim();if(value.length>30)return res.status(400).json({error:'Ngày không hợp lệ'});await pool.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[value]);res.json({ok:true})}catch(e){sendError(res,e)}});
+// The selected battle date is the match identifier; switching dates opens a fresh weekly roster.
+app.put('/api/date',auth,async(req,res)=>{let client;try{
+ const value=String(req.body?.value||'').trim();
+ const match=/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/.exec(value);
+ if(!match)return res.status(400).json({error:'Ngày bang chiến phải là DD/MM hoặc DD/MM/YYYY'});
+ const day=Number(match[1]),month=Number(match[2]),year=Number(match[3]||new Date().getFullYear());
+ const dt=new Date(Date.UTC(year,month-1,day));
+ if(dt.getUTCFullYear()!==year||dt.getUTCMonth()!==month-1||dt.getUTCDate()!==day)return res.status(400).json({error:'Ngày bang chiến không hợp lệ'});
+ const iso=dt.toISOString().slice(0,10);
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const old=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
+ if(old.rowCount&&!old.rows[0].match_date){
+  const previous=await client.query("SELECT value FROM app_settings WHERE key='war_date'");
+  const prev=/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/.exec(previous.rows[0]?.value||'');
+  if(prev){const pdt=new Date(Date.UTC(Number(prev[3]||year),Number(prev[2])-1,Number(prev[1])));if(!Number.isNaN(pdt.valueOf()))await client.query('UPDATE attendance_rounds SET match_date=$1 WHERE id=$2',[pdt.toISOString().slice(0,10),old.rows[0].id]);}
+ }
+ const active=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true LIMIT 1');
+ if(!active.rowCount||(active.rows[0].match_date instanceof Date?active.rows[0].match_date.toISOString().slice(0,10):String(active.rows[0].match_date).slice(0,10))!==iso){
+  await client.query('UPDATE attendance_rounds SET is_active=false WHERE is_active=true');
+  const existing=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1 LIMIT 1',[iso]);
+  if(existing.rowCount)await client.query('UPDATE attendance_rounds SET is_active=true WHERE id=$1',[existing.rows[0].id]);
+  else await client.query('INSERT INTO attendance_rounds(title,is_active,match_date) VALUES($1,true,$2)', ['Bang chiến '+value,iso]);
+ }
+ await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[value]);
+ await client.query('COMMIT');res.json({ok:true,value});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+
+app.get('/api/attendance/history',auth,async(req,res)=>{try{
+ const rounds=(await pool.query(`SELECT r.id,r.title,to_char(r.match_date,'DD/MM/YYYY') AS match_date,r.is_active,
+ COUNT(h.id)::int AS total FROM attendance_rounds r LEFT JOIN attendance_registration_history h ON h.round_id=r.id
+ GROUP BY r.id ORDER BY r.match_date DESC NULLS LAST,r.id DESC`)).rows;
+ res.json({rounds});
+ }catch(e){sendError(res,e)}});
+app.get('/api/attendance/history/:id',auth,async(req,res)=>{try{
+ const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
+ const r=await pool.query("SELECT id,title,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE id=$1",[id]);
+ if(!r.rowCount)return res.status(404).json({error:'Không tìm thấy trận'});
+ const entries=(await pool.query('SELECT character_name,class_name,registered_at,deleted_at FROM attendance_registration_history WHERE round_id=$1 ORDER BY registered_at ASC',[id])).rows;
+ res.json({round:r.rows[0],entries});
+ }catch(e){sendError(res,e)}});
 app.use(express.static(path.join(__dirname,'public'),{index:'index.html'}));app.get('/health',(_,res)=>res.json({ok:true}));
 async function init(){await pool.query(fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8'));const email=process.env.ADMIN_EMAIL?.trim().toLowerCase(),pass=process.env.ADMIN_PASSWORD;if(email&&pass){if(pass.length<12)throw Error('ADMIN_PASSWORD must have at least 12 characters');const existing=await pool.query('SELECT id FROM admins WHERE email=$1',[email]);if(!existing.rowCount){await pool.query('INSERT INTO admins(email,password_hash) VALUES($1,$2)',[email,await bcrypt.hash(pass,12)]);console.log('Admin account created')}}else console.warn('Set ADMIN_EMAIL and ADMIN_PASSWORD in Render Environment');app.listen(process.env.PORT||3000,()=>console.log('404 Sakura V12 ready'))}
 init().catch(e=>{console.error('Startup error:',e);process.exit(1)});
