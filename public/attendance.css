@@ -13,3 +13,119 @@
 .att-group[data-class="Tố Vấn"]{border-color:#f6c5e9}.att-group[data-class="Tố Vấn"] h3{background:#f6c5e9;color:#572f48}
 
 .att-group li{display:flex;justify-content:space-between;align-items:center;gap:8px}.att-delete{background:#ffe3eb;color:#9e2454;border:1px solid #f7b3c9;border-radius:9px;padding:5px 10px;cursor:pointer;font:inherit;font-size:12px;font-weight:700}.att-delete:hover{background:#ffc8d9}
+
+/* 404 SAKURA - ĐỒNG BỘ MÀU MÔN PHÁI */
+
+:root {
+  --cuu-linh: #b7a9d7;
+  --toai-mong: #b9e1f7;
+  --huyet-ha: #ef9ca5;
+  --long-ngam: #b7d9ab;
+  --thiet-y: #ffe3a0;
+  --than-tuong: #507bd2;
+  --to-van: #f6c6e8;
+}
+
+/* Khung từng môn phái */
+.faction-column {
+  background: #ffffff;
+  border: 1px solid #ffc0db;
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 320px;
+}
+
+/* Tiêu đề */
+.faction-column .faction-header {
+  padding: 12px 14px;
+  font-weight: 800;
+  color: #a01753;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Màu riêng cho 7 phái */
+.faction-column[data-faction="Cửu Linh"] .faction-header {
+  background: var(--cuu-linh);
+}
+
+.faction-column[data-faction="Toái Mộng"] .faction-header {
+  background: var(--toai-mong);
+}
+
+.faction-column[data-faction="Huyết Hà"] .faction-header {
+  background: var(--huyet-ha);
+}
+
+.faction-column[data-faction="Long Ngâm"] .faction-header {
+  background: var(--long-ngam);
+}
+
+.faction-column[data-faction="Thiết Y"] .faction-header {
+  background: var(--thiet-y);
+}
+
+.faction-column[data-faction="Thần Tương"] .faction-header {
+  background: var(--than-tuong);
+  color: #ffffff;
+}
+
+.faction-column[data-faction="Tố Vấn"] .faction-header {
+  background: var(--to-van);
+}
+
+/* Danh sách nhân vật */
+.faction-column .faction-members {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Thẻ nhân vật */
+.faction-column .member-item {
+  background: #fff5fa;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Tên nhân vật */
+.faction-column .member-name {
+  color: #a01753;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Thời gian */
+.faction-column .member-time {
+  color: #9c7b90;
+  font-size: 10px;
+}
+
+/* Nút xóa */
+.faction-column .member-delete {
+  background: #ffe1ec;
+  color: #c40052;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Điện thoại */
+@media (max-width: 768px) {
+  .faction-column {
+    min-height: 200px;
+  }
+
+  .faction-column .faction-header {
+    padding: 10px;
+  }
+}
