@@ -95,6 +95,25 @@ app.post('/api/attendance/rounds',auth,async(req,res)=>{let client;try{
  await client.query('COMMIT');res.status(201).json({ok:true,id:fresh.rows[0].id,date});
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 
+// V30.7: admin may change the date of the current match without creating a new round.
+app.patch('/api/attendance/rounds/current/date',auth,async(req,res)=>{let client;try{
+ const date=String(req.body?.date||'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return res.status(400).json({error:'Ngày không hợp lệ'});
+ const parsed=new Date(date+'T00:00:00Z');
+ if(!Number.isFinite(parsed.valueOf())||parsed.toISOString().slice(0,10)!==date)return res.status(400).json({error:'Ngày không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');
+ await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const current=await client.query('SELECT id FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
+ if(!current.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Chưa có trận đang mở'});}
+ const duplicate=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1 AND id<>$2 LIMIT 1',[date,current.rows[0].id]);
+ if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Ngày này đã thuộc một trận khác trong lịch sử'});}
+ await client.query('UPDATE attendance_rounds SET match_date=$1 WHERE id=$2',[date,current.rows[0].id]);
+ const [year,month,day]=date.split('-');
+ await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value",[day+'/'+month]);
+ await client.query('COMMIT');res.json({ok:true,id:current.rows[0].id,date,display:day+'/'+month+'/'+year});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Ngày này đã được sử dụng'});sendError(res,e)}finally{if(client)client.release()}
+});
+
 // V30.4: reopen an archived match, retaining registrations for every match.
 app.post('/api/attendance/rounds/:id/reopen',auth,async(req,res)=>{let client;try{
  const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
