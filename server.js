@@ -95,6 +95,38 @@ app.post('/api/attendance/rounds',auth,async(req,res)=>{let client;try{
  await client.query('COMMIT');res.status(201).json({ok:true,id:fresh.rows[0].id,date});
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
 
+// V30.4: reopen an archived match, retaining registrations for every match.
+app.post('/api/attendance/rounds/:id/reopen',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const found=await client.query('SELECT id,match_date,is_active FROM attendance_rounds WHERE id=$1 FOR UPDATE',[id]);
+ if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy trận'});}
+ if(found.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Trận này đang mở'});}
+ await client.query('UPDATE attendance_rounds SET is_active=false WHERE is_active=true');
+ await client.query('UPDATE attendance_rounds SET is_active=true WHERE id=$1',[id]);
+ const date=found.rows[0].match_date;
+ if(date){const v=date instanceof Date?date.toISOString().slice(0,10):String(date).slice(0,10);const [y,m,d]=v.split('-');await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[d+'/'+m]);}
+ // Previous lineup is not transferable between rounds; skills remain untouched.
+ await client.query("DELETE FROM formation_cells WHERE cell_key LIKE '%:name'");
+ await client.query('COMMIT');res.json({ok:true,id});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+
+// V30.4: admin-only rename of an active registration, its history and matching lineup cells.
+app.patch('/api/attendance/:id/name',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id),name=String(req.body?.name||'').trim();
+ if(!Number.isSafeInteger(id)||id<1||name.length<2||name.length>50)return res.status(400).json({error:'Tên phải có từ 2 đến 50 ký tự'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const current=await client.query('SELECT e.id,e.round_id,e.character_name,r.is_active FROM attendance_entries e JOIN attendance_rounds r ON r.id=e.round_id WHERE e.id=$1 FOR UPDATE',[id]);
+ if(!current.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy lượt đăng ký'});}
+ if(!current.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Chỉ sửa tên trong trận đang mở'});}
+ const duplicate=await client.query('SELECT 1 FROM attendance_entries WHERE round_id=$1 AND id<>$2 AND lower(btrim(character_name))=lower($3)',[current.rows[0].round_id,id,name]);
+ if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Tên này đã được đăng ký'});}
+ await client.query('UPDATE attendance_entries SET character_name=$1 WHERE id=$2',[name,id]);
+ await client.query('UPDATE attendance_registration_history SET character_name=$1 WHERE attendance_id=$2',[name,id]);
+ await client.query("UPDATE formation_cells SET value=$1,updated_at=now() WHERE cell_key LIKE '%:name' AND lower(btrim(value))=lower(btrim($2))",[name,current.rows[0].character_name]);
+ await client.query('COMMIT');res.json({ok:true,id,name});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Tên này đã được đăng ký'});sendError(res,e)}finally{if(client)client.release()}});
+
 app.get('/api/attendance/history',auth,async(req,res)=>{try{
  const rounds=(await pool.query(`SELECT r.id,r.title,to_char(r.match_date,'DD/MM/YYYY') AS match_date,r.is_active,
  COUNT(h.id)::int AS total FROM attendance_rounds r LEFT JOIN attendance_registration_history h ON h.round_id=r.id
@@ -103,7 +135,7 @@ app.get('/api/attendance/history',auth,async(req,res)=>{try{
  }catch(e){sendError(res,e)}});
 app.get('/api/attendance/history/:id',auth,async(req,res)=>{try{
  const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
- const r=await pool.query("SELECT id,title,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE id=$1",[id]);
+ const r=await pool.query("SELECT id,title,is_active,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE id=$1",[id]);
  if(!r.rowCount)return res.status(404).json({error:'Không tìm thấy trận'});
  const entries=(await pool.query('SELECT character_name,class_name,registered_at,deleted_at FROM attendance_registration_history WHERE round_id=$1 ORDER BY registered_at ASC',[id])).rows;
  res.json({round:r.rows[0],entries});

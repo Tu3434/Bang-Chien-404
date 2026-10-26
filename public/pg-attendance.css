@@ -61,3 +61,8 @@ body.dark #att-list .att-member-info,
 body.dark #att-list .att-member small {color:#fff0f8;opacity:1}
 body.dark #att-list .att-empty {color:#e1d3df}
 @media(max-width:850px){#att-list .att-class-body{min-height:80px}#att-list .att-member{min-height:58px}}
+
+/* V30.4: admin rename action */
+#att-list .att-member .att-edit{flex:0 0 auto;border:1px solid #d9b3f2;background:#f4e7ff;color:#7a328f;padding:6px 8px;border-radius:8px;font-weight:800;cursor:pointer;font-size:12px}
+#att-list .att-member .att-edit:hover{background:#e9d1ff}
+#att-list .att-member{flex-wrap:wrap}

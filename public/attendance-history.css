@@ -27,3 +27,11 @@ body.dark .history-detail h3{color:#ffb7d9}
 body.dark .history-round:not(.selected){background:#3c3249;color:#f7d8e9;border-color:#75576e}
 @media(max-width:650px){.history-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.history-class h4{padding:10px;font-size:13px}.history-class .history-person{margin:6px;padding:8px;font-size:12px}}
 @media(max-width:370px){.history-grid{grid-template-columns:1fr}}
+
+/* V30.4: reopen match control */
+.history-match-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.history-match-heading h3{margin:0}
+.history-reopen{background:#f34f9d;color:#fff;border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:pointer}
+.history-reopen:hover{background:#d52c81}.history-reopen:disabled{opacity:.55;cursor:wait}
+.history-active-label{font-weight:700;color:#24835e;font-size:13px}
+body.dark .history-active-label{color:#91e7b9}
