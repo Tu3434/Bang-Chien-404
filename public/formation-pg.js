@@ -27,11 +27,11 @@ function editMember(e){
  let selectedClass=rows[key(e)]?.phai||'';let filter='';let saving=false;
  const safeName=x=>String(x||'').trim().toLocaleLowerCase();
  const occupied=m=>Object.entries(rows).some(([other,x])=>other!==key(e)&&other.endsWith(':name')&&safeName(x.value)===safeName(m.name));
- const filterDefs=[['','✿  Tất cả'],['Cửu Linh','✦  Cửu Linh'],['Toái Mộng','⚔  Toái Mộng'],['Huyết Hà','✧  Huyết Hà'],['Long Ngâm','❀  Long Ngâm'],['Thiết Y','⬡  Thiết Y'],['Thần Tương','✺  Thần Tương'],['Tố Vấn','✿  Tố Vấn']];
+ const filterDefs=[['','🔥  Tất cả'],['Cửu Linh','✦  Cửu Linh'],['Toái Mộng','⚔  Toái Mộng'],['Huyết Hà','✧  Huyết Hà'],['Long Ngâm','🐉  Long Ngâm'],['Thiết Y','⬡  Thiết Y'],['Thần Tương','✺  Thần Tương'],['Tố Vấn','🔥  Tố Vấn']];
  function renderFilters(){filters.replaceChildren();for(const [value,label] of filterDefs){const b=document.createElement('button');b.type='button';b.className='roster-filter';b.textContent=label;b.dataset.class=value||'all';b.setAttribute('aria-pressed',String(filter===value));b.onclick=()=>{filter=value;renderFilters();draw()};filters.append(b)}}
  function draw(){list.replaceChildren();const query=safeName(input.value);const shown=members.filter(m=>(!filter||m.phai===filter)&&(!query||safeName(m.name).includes(query))).slice(0,80);
   for(const m of shown){const isUsed=occupied(m);const item=document.createElement('div');item.className='roster-item';item.dataset.class=m.phai||'';item.setAttribute('role','listitem');
-   const emblem=document.createElement('span');emblem.className='roster-emblem';emblem.setAttribute('aria-hidden','true');emblem.textContent=({'Cửu Linh':'✿','Toái Mộng':'⚔','Huyết Hà':'✦','Long Ngâm':'❀','Thiết Y':'⬡','Thần Tương':'✺','Tố Vấn':'❁'})[m.phai]||'✿';
+   const emblem=document.createElement('span');emblem.className='roster-emblem';emblem.setAttribute('aria-hidden','true');emblem.textContent=({'Cửu Linh':'🔥','Toái Mộng':'⚔','Huyết Hà':'✦','Long Ngâm':'🐉','Thiết Y':'⬡','Thần Tương':'✺','Tố Vấn':'✧'})[m.phai]||'🔥';
    const info=document.createElement('div');info.className='roster-info';const name=document.createElement('strong');name.textContent=m.name;const tag=document.createElement('span');tag.className='roster-tag';tag.textContent=m.phai;info.append(name,tag);
    const action=document.createElement('button');action.type='button';action.className='roster-pick';action.disabled=isUsed;action.textContent=isUsed?'✓  Đã xếp':'＋  Chọn';action.title=isUsed?'Nhân vật đã được xếp vào vị trí khác':'';
    action.onclick=async()=>{

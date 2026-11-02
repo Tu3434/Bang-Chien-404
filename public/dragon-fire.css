@@ -1,0 +1,23 @@
+/* Nhật Nguyệt Chiếu Thiên V31.1 · Dragon & Fire decorative language.
+   All changes are presentational; faction colors and application logic stay intact. */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+:root{--dragon-gold:#f1ba6d;--dragon-purple:#9b7fe9;--dragon-ink:#3c2b5d}
+body,button,input,select,textarea,.toolbar button,.nav a,.nav button,
+.round-admin,.round-create-dialog,.history-dialog,.history-admin-actions button,
+.round-date-badge,.round-edit-date{font-family:'Be Vietnam Pro','Segoe UI',Arial,sans-serif!important}
+
+/* Replace floral images and pseudo-elements with restrained fire and celestial elements. */
+body:before{content:'✦'!important;font-family:serif!important;color:#dba15c!important;font-size:78px!important;opacity:.23!important}
+.topbar:after{content:'✧　✦　✧'!important;color:#c699eb!important;opacity:.47!important;font-family:serif!important}
+.hero{background:radial-gradient(circle at 8% 22%,rgba(241,186,109,.20),transparent 26%),radial-gradient(circle at 88% 15%,rgba(157,127,233,.18),transparent 29%),linear-gradient(105deg,#fffdfd,#f1eafb)!important}
+.hero .mascot{font-size:39px;filter:drop-shadow(0 2px 8px #dbb77a40);opacity:.9}
+.flower{color:#b48be8!important}
+.sakura-roster-modal:before{content:'🐉'!important;color:#a891e9!important;opacity:.10!important;filter:grayscale(1)}
+.sakura-roster-modal:after{content:'🔥'!important;color:#e7b16b!important;opacity:.13!important}
+.sakura-roster-modal .roster-item:after{content:'✦  ✧'!important;color:#9b7fe9!important;opacity:.13!important}
+.brand-copy h1,.brand h1{word-break:normal;overflow-wrap:break-word}
+.brand-mark img,.hero .logo img{object-fit:contain}
+/* Class panels preserve the seven class-specific colors. */
+.formation h2,.round-overline,.toolbar-title{letter-spacing:.035em}
+body.dark .hero{background:radial-gradient(circle at 12% 12%,rgba(243,187,114,.10),transparent 25%),radial-gradient(circle at 89% 18%,rgba(138,115,230,.16),transparent 30%),linear-gradient(115deg,#302542,#211b38)!important}
+@media(max-width:700px){.hero .mascot{display:none}.topbar:after{font-size:26px!important;right:6%!important;top:-13px!important}}
