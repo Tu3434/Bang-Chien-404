@@ -1,0 +1,25 @@
+/* V31.4: Admin-only faction change dialog for registered characters. */
+#att-list .att-member .att-change-class{flex:0 0 auto!important;min-height:31px;padding:6px 10px!important;border:1px solid #cfab77;border-radius:8px;background:#fff1d8;color:#795011;font:700 11px/1.35 'Be Vietnam Pro','Segoe UI',sans-serif;white-space:nowrap;cursor:pointer}
+#att-list .att-member .att-change-class:hover{background:#ffe1a8}
+#att-list .att-member .att-edit{margin-left:0!important}
+.att-change-class-dialog{width:min(420px,calc(100vw - 28px));max-height:90dvh;max-height:90vh;overflow:auto;padding:0;border:1px solid #d9c8ec;border-radius:18px;background:#fdfbff;color:#382657;box-shadow:0 20px 75px #1d153966;font:500 14px/1.5 'Be Vietnam Pro','Segoe UI',sans-serif}
+.att-change-class-dialog::backdrop{background:rgba(28,19,49,.58)}
+.att-change-class-dialog[open]{display:block}
+.att-change-class-inner{padding:22px;display:flex;flex-direction:column;gap:14px}
+.att-change-class-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.att-change-class-top h3{font-size:20px;margin:0;color:#7357ae}
+.att-change-class-top button{border:0;border-radius:50%;background:#eee7fa;color:#6b5089;width:34px;height:34px;cursor:pointer}
+.att-change-class-inner p{margin:0}
+.att-change-class-inner strong{overflow-wrap:anywhere}
+.att-change-class-inner label{font-weight:700}
+.att-change-class-inner select{width:100%;min-height:46px;padding:10px 13px;border:1px solid #c9b6e7;border-radius:10px;background:#fff;color:#382657;font:inherit}
+.att-change-class-actions{display:flex;justify-content:flex-end;gap:10px}
+.att-change-class-actions button{cursor:pointer;padding:11px 15px;border-radius:10px;font:700 13px 'Be Vietnam Pro','Segoe UI',sans-serif}
+#att-change-class-cancel{background:#f3eef9;color:#6c577b;border:1px solid #e0d4ee}
+#att-change-class-submit{background:linear-gradient(120deg,#8a73e6,#c78a32);color:#fff;border:0}
+#att-change-class-submit:disabled{opacity:.6;cursor:wait}
+#att-change-class-message{font-size:12px;min-height:1em;color:#94513e}
+body.dark .att-change-class-dialog{background:#2b233b;color:#f9edff;border-color:#635276}
+body.dark .att-change-class-inner select{background:#392e4a;color:#fff;border-color:#7a6299}
+body.dark #att-list .att-member .att-change-class{background:#5b422e;color:#ffe4af;border-color:#a17b45}
+@media(max-width:540px){.att-change-class-actions{flex-direction:column}.att-change-class-actions button{width:100%}}

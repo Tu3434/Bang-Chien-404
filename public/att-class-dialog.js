@@ -1,0 +1,1 @@
+(()=>{'use strict';const d=document.getElementById('att-change-class-dialog');if(!d)return;document.getElementById('att-change-class-close')?.addEventListener('click',()=>d.close());document.getElementById('att-change-class-cancel')?.addEventListener('click',()=>d.close());d.addEventListener('click',e=>{if(e.target===d)d.close()})})();
