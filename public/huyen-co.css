@@ -1,0 +1,24 @@
+/* Nhật Nguyệt Chiếu Thiên V31.2 — Huyền Cơ: vàng đồng sẫm ngả cam. */
+:root{--huyenco-head:#c78a32;--huyenco-ink:#4d2a0c;--huyenco-soft:#fff2dd;--huyenco-border:#e5b56c}
+/* Tám phái, vẫn responsive theo các breakpoint cũ. */
+#att-list.att-grid{grid-template-columns:repeat(8,minmax(0,1fr))}
+@media(max-width:1500px){#att-list.att-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:850px){#att-list.att-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){#att-list.att-grid{grid-template-columns:1fr}}
+/* Điểm danh và bộ chọn phái */
+#att-list .att-class-card[data-class="Huyền Cơ"]{
+ --phai-head:var(--huyenco-head);--phai-ink:var(--huyenco-ink);
+ --phai-soft:var(--huyenco-soft);--phai-border:var(--huyenco-border);
+}
+.class-picker-menu button[data-class="Huyền Cơ"]{background:var(--huyenco-head);color:var(--huyenco-ink)}
+.att-group[data-class="Huyền Cơ"]{--tone:var(--huyenco-head);--tone-ink:var(--huyenco-ink)}
+/* Lịch sử đăng ký: phái thứ 8. */
+.history-class:nth-child(8){--faction:var(--huyenco-head);--faction-text:var(--huyenco-ink);--faction-soft:var(--huyenco-soft)}
+/* Xếp đội hình và popup chọn người. */
+.formation-v10 td.amber{background:var(--huyenco-head)!important;color:var(--huyenco-ink)!important}
+.v10-dialog .choices .character-option[data-class="Huyền Cơ"]{background:var(--huyenco-head);color:var(--huyenco-ink)}
+.sakura-roster-modal .roster-item[data-class="Huyền Cơ"]{
+ --c1:#e4b46c;--c2:#fff1d8;--ink:#754112;--line:#cb9145
+}
+body.dark #att-list .att-class-card[data-class="Huyền Cơ"] .att-class-head,
+body.dark .history-class:nth-child(8) h4{color:var(--huyenco-ink)}

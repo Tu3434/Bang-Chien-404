@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const classes=['Cửu Linh','Toái Mộng','Huyết Hà','Long Ngâm','Thiết Y','Thần Tương','Tố Vấn'];const ownedKey='404_pg_attendance_owners';let entries=[],admin=false;const $=s=>document.querySelector(s);const status=s=>{$('#att-status').textContent=s};
+const classes=['Cửu Linh','Toái Mộng','Huyết Hà','Long Ngâm','Thiết Y','Thần Tương','Tố Vấn','Huyền Cơ'];const ownedKey='404_pg_attendance_owners';let entries=[],admin=false;const $=s=>document.querySelector(s);const status=s=>{$('#att-status').textContent=s};
 async function api(url,opts={}){const r=await fetch(url,{...opts,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json',...opts.headers}}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
 function owners(){try{return JSON.parse(localStorage.getItem(ownedKey)||'{}')}catch{return {}}}function remember(id,secret){const o=owners();o[id]=secret;localStorage.setItem(ownedKey,JSON.stringify(o))}
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}

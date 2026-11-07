@@ -1,7 +1,7 @@
 /* 404 Sakura V30.9 — xuất PNG từ dữ liệu PostgreSQL, không ghi dữ liệu. */
 (()=>{'use strict';
 const btn=document.getElementById('btn-export-png');if(!btn)return;
-const palettes={'Cửu Linh':['#b9a7d5','#f1eafa','#52366d'],'Toái Mộng':['#b7e2f7','#e8f6fe','#215d81'],'Huyết Hà':['#ee9da8','#fff0f2','#843c49'],'Long Ngâm':['#b9d9ae','#f0f9ed','#325b35'],'Thiết Y':['#ffe1a0','#fff8e8','#855a15'],'Thần Tương':['#547cd2','#eaf0ff','#24467f'],'Tố Vấn':['#f4c2e4','#fff0f9','#913a77']};
+const palettes={'Cửu Linh':['#b9a7d5','#f1eafa','#52366d'],'Toái Mộng':['#b7e2f7','#e8f6fe','#215d81'],'Huyết Hà':['#ee9da8','#fff0f2','#843c49'],'Long Ngâm':['#b9d9ae','#f0f9ed','#325b35'],'Thiết Y':['#ffe1a0','#fff8e8','#855a15'],'Thần Tương':['#547cd2','#eaf0ff','#24467f'],'Tố Vấn':['#f4c2e4','#fff0f9','#913a77'],'Huyền Cơ':['#c78a32','#fff2dd','#6e3c12']};
 const W=1800,M=65,GAP=20,TOP=258,HEAD=65,ROW=114,SEC=HEAD+6*ROW+28,BOTTOM=94,H=TOP+SEC*3+GAP*2+BOTTOM;
 function round(ctx,x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}}
 function txt(ctx,s,x,y,size=23,color='#623752',weight=600,align='left'){ctx.font=`${weight} ${size}px "Be Vietnam Pro", "Segoe UI", Arial, sans-serif`;ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillText(s,x,y)}

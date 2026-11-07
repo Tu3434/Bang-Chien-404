@@ -1,0 +1,194 @@
+ 'use strict';
+const express=require('express'),{Pool}=require('pg'),bcrypt=require('bcryptjs'),crypto=require('crypto'),helmet=require('helmet'),cookieParser=require('cookie-parser'),{rateLimit}=require('express-rate-limit'),fs=require('fs'),path=require('path');
+if(!process.env.DATABASE_URL)throw Error('Missing DATABASE_URL');
+const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_URL.includes('localhost')?false:{rejectUnauthorized:false}});
+const app=express();app.disable('x-powered-by');app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
+const sha=x=>crypto.createHash('sha256').update(x).digest('hex'),random=()=>crypto.randomBytes(32).toString('hex');
+const classes=['Cửu Linh','Toái Mộng','Huyết Hà','Long Ngâm','Thiết Y','Thần Tương','Tố Vấn','Huyền Cơ'];
+const sendError=(res,e)=>{console.error(e);res.status(500).json({error:'Lỗi máy chủ. Kiểm tra Render Logs.'})};
+const limiter=rateLimit({windowMs:15*60*1000,limit:35,standardHeaders:'draft-7',legacyHeaders:false});
+async function auth(req,res,next){try{const token=req.cookies.admin_session;if(!token)return res.status(401).json({error:'Vui lòng đăng nhập'});const r=await pool.query('SELECT a.id,a.email FROM sessions s JOIN admins a ON a.id=s.admin_id WHERE s.token_hash=$1 AND s.expires_at>now()',[sha(token)]);if(!r.rowCount)return res.status(401).json({error:'Phiên đăng nhập hết hạn'});req.admin=r.rows[0];next()}catch(e){sendError(res,e)}}
+async function optionalAuth(req){const t=req.cookies.admin_session;if(!t)return false;const r=await pool.query('SELECT 1 FROM sessions WHERE token_hash=$1 AND expires_at>now()',[sha(t)]);return !!r.rowCount}
+app.post('/api/login',limiter,async(req,res)=>{try{const {email,password}=req.body||{};const r=await pool.query('SELECT * FROM admins WHERE email=$1',[String(email||'').toLowerCase()]);if(!r.rowCount||!await bcrypt.compare(String(password||''),r.rows[0].password_hash))return res.status(401).json({error:'Email hoặc mật khẩu không đúng'});const token=random();await pool.query('INSERT INTO sessions(token_hash,admin_id,expires_at) VALUES($1,$2,now()+interval \'7 days\')',[sha(token),r.rows[0].id]);res.cookie('admin_session',token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',maxAge:7*86400000,path:'/'}).json({ok:true})}catch(e){sendError(res,e)}});
+app.get('/api/me',async(req,res)=>{try{res.json({admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
+app.post('/api/logout',async(req,res)=>{try{if(req.cookies.admin_session)await pool.query('DELETE FROM sessions WHERE token_hash=$1',[sha(req.cookies.admin_session)]);res.clearCookie('admin_session',{path:'/'}).json({ok:true})}catch(e){sendError(res,e)}});
+async function round(){const r=await pool.query("SELECT id,title,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1");return r.rows[0]}
+app.get('/api/attendance',async(req,res)=>{try{res.set('Cache-Control','no-store, no-cache, must-revalidate');const active=await round();const entries=active?(await pool.query('SELECT id,character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at ASC',[active.id])).rows:[];res.json({round:active,entries,admin:await optionalAuth(req)})}catch(e){sendError(res,e)}});
+app.post('/api/attendance',limiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),phai=String(req.body?.phai||'');if(name.length<2||name.length>50||!classes.includes(phai))return res.status(400).json({error:'Tên hoặc môn phái không hợp lệ'});const active=await round();if(!active)return res.status(409).json({error:'Chưa mở đợt điểm danh'});const secret=random();const r=await pool.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[active.id,name,phai,sha(secret)]);await pool.query('INSERT INTO attendance_registration_history(attendance_id,round_id,character_name,class_name) VALUES($1,$2,$3,$4) ON CONFLICT(attendance_id) DO NOTHING',[r.rows[0].id,active.id,name,phai]);res.status(201).json({id:r.rows[0].id,secret})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Tên này đã điểm danh trong đợt hiện tại'});sendError(res,e)}});
+app.delete('/api/attendance/:id',limiter,async(req,res)=>{
+ let client;
+ try{
+  const id=Number(req.params.id);
+  if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'ID không hợp lệ'});
+  const admin=await optionalAuth(req);
+  const secret=String(req.body?.secret||'');
+  if(!admin&&!/^[a-f0-9]{64}$/.test(secret))return res.status(403).json({error:'Bạn chỉ có thể xóa lượt điểm danh của mình trên thiết bị này'});
+  client=await pool.connect();
+  await client.query('BEGIN');
+  // Same lock as formation assignments: prevents a deletion racing with an assignment.
+  await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+  const removed=admin
+   ?await client.query('DELETE FROM attendance_entries WHERE id=$1 RETURNING character_name,round_id',[id])
+   :await client.query('DELETE FROM attendance_entries WHERE id=$1 AND owner_hash=$2 RETURNING character_name,round_id',[id,sha(secret)]);
+  if(!removed.rowCount){await client.query('ROLLBACK');return res.status(403).json({error:'Không có quyền xóa hoặc tên không tồn tại'});}
+  const {character_name,round_id}=removed.rows[0];
+  await client.query('UPDATE attendance_registration_history SET deleted_at=now() WHERE attendance_id=$1',[id]);
+  // Keep the formation entry only if the same character is still registered in the active round.
+  const remaining=await client.query(`SELECT 1 FROM attendance_entries e JOIN attendance_rounds r ON r.id=e.round_id WHERE r.is_active=true AND lower(btrim(e.character_name))=lower(btrim($1)) LIMIT 1`,[character_name]);
+  let cleared=0;
+  if(!remaining.rowCount){
+   const result=await client.query(`DELETE FROM formation_cells WHERE cell_key LIKE '%:name' AND lower(btrim(value))=lower(btrim($1))`,[character_name]);
+   cleared=result.rowCount;
+  }
+  await client.query('COMMIT');
+  res.json({ok:true,formation_cleared:cleared});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}
+ finally{if(client)client.release()}
+});
+app.get('/api/formation',async(req,res)=>{try{const r=await pool.query('SELECT cell_key,value,phai FROM formation_cells');res.json(r.rows)}catch(e){sendError(res,e)}});
+app.put('/api/formation/:key',auth,async(req,res)=>{let client;try{
+ const key=req.params.key,value=String(req.body?.value||'').trim(),phai=String(req.body?.phai||'');
+ if(!/^(10|[1-9]):[0-5]:(name|skill)$/.test(key)||value.length>100||(phai&&!classes.includes(phai)))return res.status(400).json({error:'Dữ liệu ô không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');
+ // Serialize assignments across administrators so concurrent requests cannot assign the same player.
+ await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ if(key.endsWith(':name')&&value){
+  const registered=await client.query('SELECT id,class_name FROM attendance_entries WHERE lower(btrim(character_name))=lower($1) ORDER BY id DESC LIMIT 1',[value]);
+  if(!registered.rowCount){await client.query('ROLLBACK');return res.status(400).json({error:'Chỉ được chọn người đã điểm danh'})}
+  const duplicate=await client.query("SELECT cell_key FROM formation_cells WHERE cell_key LIKE '%:name' AND cell_key<>$1 AND lower(btrim(value))=lower($2) LIMIT 1",[key,value]);
+  if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Nhân vật này đã được xếp ở '+duplicate.rows[0].cell_key+'! Không thể xếp trùng.'})}
+  await client.query('INSERT INTO formation_cells(cell_key,value,phai) VALUES($1,$2,$3) ON CONFLICT(cell_key) DO UPDATE SET value=$2,phai=$3,updated_at=now()',[key,value,registered.rows[0].class_name]);
+ }else{
+  await client.query('INSERT INTO formation_cells(cell_key,value,phai) VALUES($1,$2,$3) ON CONFLICT(cell_key) DO UPDATE SET value=$2,phai=$3,updated_at=now()',[key,value,key.endsWith(':skill')?null:(phai||null)]);
+ }
+ await client.query('COMMIT');res.json({ok:true});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+app.delete('/api/formation',auth,async(req,res)=>{try{await pool.query('DELETE FROM formation_cells');res.json({ok:true})}catch(e){sendError(res,e)}});
+app.get('/api/date',async(req,res)=>{try{const r=await pool.query("SELECT value FROM app_settings WHERE key='war_date'");res.json({value:r.rows[0]?.value||'26/09'})}catch(e){sendError(res,e)}});
+// Date displayed on the formation page is read-only with respect to round creation.
+app.put('/api/date',auth,async(req,res)=>res.status(403).json({error:'Hãy tạo trận mới tại trang Điểm danh'}));
+// One-time, idempotent migration: associate existing registrations with the current week's match.
+async function ensureCurrentMatch(){
+ const client=await pool.connect();try{await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const r=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
+ if(r.rowCount&&!r.rows[0].match_date){
+  await client.query("UPDATE attendance_rounds SET title='Bang chiến',match_date=DATE '2026-10-25' WHERE id=$1",[r.rows[0].id]);
+  await client.query("INSERT INTO app_settings(key,value) VALUES('war_date','25/10') ON CONFLICT(key) DO UPDATE SET value='25/10'");
+ }
+ await client.query('COMMIT');}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+}
+app.post('/api/attendance/rounds',auth,async(req,res)=>{let client;try{
+ const date=String(req.body?.date||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return res.status(400).json({error:'Ngày không hợp lệ'});
+ const dt=new Date(date+'T00:00:00Z');if(!Number.isFinite(dt.valueOf())||dt.toISOString().slice(0,10)!==date)return res.status(400).json({error:'Ngày không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const old=await client.query('SELECT id,match_date FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
+ if(old.rowCount){const previous=old.rows[0].match_date;const oldDate=previous instanceof Date?previous.toISOString().slice(0,10):String(previous||'').slice(0,10);
+ if(oldDate===date){await client.query('ROLLBACK');return res.status(409).json({error:'Ngày này đã là trận đang mở'});}
+ if(oldDate&&date<oldDate){await client.query('ROLLBACK');return res.status(400).json({error:'Ngày trận mới phải sau trận hiện tại'});}}
+ const exists=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1',[date]);
+ if(exists.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Trận này đã tồn tại trong lịch sử'});}
+ await client.query('UPDATE attendance_rounds SET is_active=false WHERE is_active=true');
+ const fresh=await client.query("INSERT INTO attendance_rounds(title,is_active,match_date) VALUES('Bang chiến',true,$1) RETURNING id",[date]);
+ const parts=date.split('-');await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[parts[2]+'/'+parts[1]]);
+ // Never carry player assignments into a new match; skill cells stay intact.
+ await client.query("DELETE FROM formation_cells WHERE cell_key LIKE '%:name'");
+ await client.query('COMMIT');res.status(201).json({ok:true,id:fresh.rows[0].id,date});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+
+// V30.7: admin may change the date of the current match without creating a new round.
+app.patch('/api/attendance/rounds/current/date',auth,async(req,res)=>{let client;try{
+ const date=String(req.body?.date||'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return res.status(400).json({error:'Ngày không hợp lệ'});
+ const parsed=new Date(date+'T00:00:00Z');
+ if(!Number.isFinite(parsed.valueOf())||parsed.toISOString().slice(0,10)!==date)return res.status(400).json({error:'Ngày không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');
+ await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const current=await client.query('SELECT id FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE');
+ if(!current.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Chưa có trận đang mở'});}
+ const duplicate=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1 AND id<>$2 LIMIT 1',[date,current.rows[0].id]);
+ if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Ngày này đã thuộc một trận khác trong lịch sử'});}
+ await client.query('UPDATE attendance_rounds SET match_date=$1 WHERE id=$2',[date,current.rows[0].id]);
+ const [year,month,day]=date.split('-');
+ await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value",[day+'/'+month]);
+ await client.query('COMMIT');res.json({ok:true,id:current.rows[0].id,date,display:day+'/'+month+'/'+year});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Ngày này đã được sử dụng'});sendError(res,e)}finally{if(client)client.release()}
+});
+
+// V30.4: reopen an archived match, retaining registrations for every match.
+app.post('/api/attendance/rounds/:id/reopen',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const found=await client.query('SELECT id,match_date,is_active FROM attendance_rounds WHERE id=$1 FOR UPDATE',[id]);
+ if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy trận'});}
+ if(found.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Trận này đang mở'});}
+ await client.query('UPDATE attendance_rounds SET is_active=false WHERE is_active=true');
+ await client.query('UPDATE attendance_rounds SET is_active=true WHERE id=$1',[id]);
+ const date=found.rows[0].match_date;
+ if(date){const v=date instanceof Date?date.toISOString().slice(0,10):String(date).slice(0,10);const [y,m,d]=v.split('-');await client.query("INSERT INTO app_settings(key,value) VALUES('war_date',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[d+'/'+m]);}
+ // Previous lineup is not transferable between rounds; skills remain untouched.
+ await client.query("DELETE FROM formation_cells WHERE cell_key LIKE '%:name'");
+ await client.query('COMMIT');const restored=await pool.query('SELECT count(*)::int AS total FROM attendance_entries WHERE round_id=$1',[id]);res.json({ok:true,id,restored:restored.rows[0].total});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+
+// V30.4: admin-only rename of an active registration, its history and matching lineup cells.
+app.patch('/api/attendance/:id/name',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id),name=String(req.body?.name||'').trim();
+ if(!Number.isSafeInteger(id)||id<1||name.length<2||name.length>50)return res.status(400).json({error:'Tên phải có từ 2 đến 50 ký tự'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const current=await client.query('SELECT e.id,e.round_id,e.character_name,r.is_active FROM attendance_entries e JOIN attendance_rounds r ON r.id=e.round_id WHERE e.id=$1 FOR UPDATE',[id]);
+ if(!current.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy lượt đăng ký'});}
+ if(!current.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Chỉ sửa tên trong trận đang mở'});}
+ const duplicate=await client.query('SELECT 1 FROM attendance_entries WHERE round_id=$1 AND id<>$2 AND lower(btrim(character_name))=lower($3)',[current.rows[0].round_id,id,name]);
+ if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Tên này đã được đăng ký'});}
+ await client.query('UPDATE attendance_entries SET character_name=$1 WHERE id=$2',[name,id]);
+ await client.query('UPDATE attendance_registration_history SET character_name=$1 WHERE attendance_id=$2',[name,id]);
+ await client.query("UPDATE formation_cells SET value=$1,updated_at=now() WHERE cell_key LIKE '%:name' AND lower(btrim(value))=lower(btrim($2))",[name,current.rows[0].character_name]);
+ await client.query('COMMIT');res.json({ok:true,id,name});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Tên này đã được đăng ký'});sendError(res,e)}finally{if(client)client.release()}});
+
+// V30.8: edit dates for archived matches; no registrations are altered.
+app.patch('/api/attendance/rounds/:id/date',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id),date=String(req.body?.date||'');
+ if(!Number.isSafeInteger(id)||id<1||!/^\d{4}-\d{2}-\d{2}$/.test(date))return res.status(400).json({error:'Ngày hoặc trận không hợp lệ'});
+ const parsed=new Date(date+'T00:00:00Z');
+ if(!Number.isFinite(parsed.valueOf())||parsed.toISOString().slice(0,10)!==date)return res.status(400).json({error:'Ngày không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const found=await client.query('SELECT id,is_active FROM attendance_rounds WHERE id=$1 FOR UPDATE',[id]);
+ if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy trận'});}
+ if(found.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Hãy sửa ngày trận đang mở ở trang Điểm danh'});}
+ const duplicate=await client.query('SELECT id FROM attendance_rounds WHERE match_date=$1 AND id<>$2',[date,id]);
+ if(duplicate.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Ngày này đã thuộc một trận khác'});}
+ await client.query('UPDATE attendance_rounds SET match_date=$1 WHERE id=$2',[date,id]);
+ await client.query('COMMIT');res.json({ok:true,id,date});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Ngày này đã tồn tại'});sendError(res,e)}finally{if(client)client.release()}});
+
+// V30.8: remove only empty archived matches; protect all registration records.
+app.delete('/api/attendance/rounds/:id',auth,async(req,res)=>{let client;try{
+ const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const found=await client.query('SELECT id,is_active FROM attendance_rounds WHERE id=$1 FOR UPDATE',[id]);
+ if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Không tìm thấy trận'});}
+ if(found.rows[0].is_active){await client.query('ROLLBACK');return res.status(409).json({error:'Không thể xóa trận đang mở. Hãy mở trận khác trước'});}
+ const entries=await client.query('SELECT 1 FROM attendance_entries WHERE round_id=$1 LIMIT 1',[id]);
+ const history=await client.query('SELECT 1 FROM attendance_registration_history WHERE round_id=$1 LIMIT 1',[id]);
+ if(entries.rowCount||history.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Trận này đã có dữ liệu đăng ký. Để tránh mất lịch sử, hệ thống chỉ cho xóa trận trống'});}
+ await client.query('DELETE FROM attendance_rounds WHERE id=$1',[id]);
+ await client.query('COMMIT');res.json({ok:true,id});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}});
+
+app.get('/api/attendance/history',auth,async(req,res)=>{try{
+ const rounds=(await pool.query(`SELECT r.id,r.title,to_char(r.match_date,'DD/MM/YYYY') AS match_date,r.is_active,
+ COUNT(h.id)::int AS total FROM attendance_rounds r LEFT JOIN attendance_registration_history h ON h.round_id=r.id
+ GROUP BY r.id ORDER BY r.match_date DESC NULLS LAST,r.id DESC`)).rows;
+ res.json({rounds});
+ }catch(e){sendError(res,e)}});
+app.get('/api/attendance/history/:id',auth,async(req,res)=>{try{
+ const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Trận không hợp lệ'});
+ const r=await pool.query("SELECT id,title,is_active,to_char(match_date,'DD/MM/YYYY') AS match_date FROM attendance_rounds WHERE id=$1",[id]);
+ if(!r.rowCount)return res.status(404).json({error:'Không tìm thấy trận'});
+ const entries=(await pool.query('SELECT character_name,class_name,registered_at,deleted_at FROM attendance_registration_history WHERE round_id=$1 ORDER BY registered_at ASC',[id])).rows;
+ res.json({round:r.rows[0],entries});
+ }catch(e){sendError(res,e)}});
+app.use(express.static(path.join(__dirname,'public'),{index:'index.html'}));app.get('/health',(_,res)=>res.json({ok:true}));
+async function init(){await pool.query(fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8'));await ensureCurrentMatch();const email=process.env.ADMIN_EMAIL?.trim().toLowerCase(),pass=process.env.ADMIN_PASSWORD;if(email&&pass){if(pass.length<12)throw Error('ADMIN_PASSWORD must have at least 12 characters');const existing=await pool.query('SELECT id FROM admins WHERE email=$1',[email]);if(!existing.rowCount){await pool.query('INSERT INTO admins(email,password_hash) VALUES($1,$2)',[email,await bcrypt.hash(pass,12)]);console.log('Admin account created')}}else console.warn('Set ADMIN_EMAIL and ADMIN_PASSWORD in Render Environment');app.listen(process.env.PORT||3000,()=>console.log('404 Sakura V12 ready'))}
+init().catch(e=>{console.error('Startup error:',e);process.exit(1)});
