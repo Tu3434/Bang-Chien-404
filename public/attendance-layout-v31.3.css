@@ -1,0 +1,93 @@
+/* Nhật Nguyệt Chiếu Thiên V31.3 — điểm danh 8 môn phái, tên hiển thị bình thường. */
+/* Không ép 8 cột vào màn hình hẹp: cột cần đủ rộng mới không bị gãy từng chữ. */
+#att-list.att-grid {
+  display:grid !important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)) !important;
+  gap:14px !important;
+  align-items:start;
+}
+#att-list .att-class-card{
+  width:100%;
+  min-width:0;
+  overflow:hidden;
+}
+#att-list .att-class-head{
+  min-height:45px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  line-height:1.35;
+}
+#att-list .att-class-head span{
+  min-width:0;
+  overflow-wrap:normal;
+  word-break:normal;
+}
+#att-list .att-class-body{
+  padding:9px !important;
+  min-height:120px;
+}
+/* Mỗi thẻ: tên và ngày nằm riêng hàng; nút ở hàng dưới. */
+#att-list .att-member{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  flex-wrap:wrap !important;
+  column-gap:7px !important;
+  row-gap:7px !important;
+  padding:11px 10px !important;
+  min-height:75px;
+}
+#att-list .att-member-info{
+  display:flex;
+  flex-direction:column;
+  flex:0 0 100% !important;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  gap:5px;
+  overflow-wrap:normal !important;
+  word-break:normal !important;
+}
+#att-list .att-member-info strong{
+  display:block;
+  width:100%;
+  font-size:13px !important;
+  line-height:1.55 !important;
+  font-weight:800;
+  white-space:normal;
+  word-break:normal !important;
+  overflow-wrap:anywhere !important;
+  letter-spacing:0 !important;
+  text-align:left;
+}
+#att-list .att-member-info small{
+  display:block;
+  font-size:11px !important;
+  line-height:1.5 !important;
+  white-space:normal;
+  overflow-wrap:normal;
+  word-break:normal;
+}
+#att-list .att-member .att-edit,
+#att-list .att-member .att-delete{
+  flex:0 0 auto !important;
+  min-height:31px;
+  padding:6px 10px !important;
+  font-size:11px !important;
+  line-height:1.35;
+  white-space:nowrap;
+}
+#att-list .att-member .att-edit{margin-left:auto;}
+#att-list .att-empty{line-height:1.5;}
+/* Giữ màu môn phái cũ và Huyền Cơ, hỗ trợ nền tối. */
+body.dark #att-list .att-member-info strong,
+body.dark #att-list .att-member-info small{color:#f7efff !important;}
+@media(min-width:1800px){
+  #att-list.att-grid{grid-template-columns:repeat(8,minmax(0,1fr)) !important;}
+}
+@media(max-width:520px){
+  #att-list.att-grid{grid-template-columns:1fr !important;}
+  #att-list .att-member-info strong{font-size:14px !important;}
+}
