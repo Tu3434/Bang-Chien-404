@@ -47,6 +47,22 @@ app.delete('/api/attendance/:id',limiter,async(req,res)=>{
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}
  finally{if(client)client.release()}
 });
+// V31.5 — Admin-controlled formation section headings, stored independently of match data.
+const defaultFormationHeadings={1:'ĐOÀN 1 · Trụ',2:'ĐOÀN 2 · Def (Mid)',3:'ĐOÀN 3 · Def (Mid)'};
+app.get('/api/formation/headings',async(req,res)=>{try{
+ res.set('Cache-Control','no-store');
+ const r=await pool.query("SELECT key,value FROM app_settings WHERE key IN ('formation_heading_1','formation_heading_2','formation_heading_3')");
+ const headings={...defaultFormationHeadings};
+ for(const item of r.rows){const id=Number(item.key.slice(-1));if(headings[id]!==undefined)headings[id]=item.value;}
+ res.json({headings});
+ }catch(e){sendError(res,e)}});
+app.put('/api/formation/headings/:id',auth,async(req,res)=>{try{
+ const id=Number(req.params.id),title=String(req.body?.title||'').trim().normalize('NFC');
+ if(![1,2,3].includes(id))return res.status(400).json({error:'Đoàn không hợp lệ'});
+ if(!title||title.length>65||/[\u0000-\u001f\u007f]/.test(title))return res.status(400).json({error:'Tiêu đề phải có từ 1 đến 65 ký tự hợp lệ'});
+ await pool.query("INSERT INTO app_settings(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value",['formation_heading_'+id,title]);
+ res.set('Cache-Control','no-store').json({ok:true,id,title});
+ }catch(e){sendError(res,e)}});
 app.get('/api/formation',async(req,res)=>{try{const r=await pool.query('SELECT cell_key,value,phai FROM formation_cells');res.json(r.rows)}catch(e){sendError(res,e)}});
 app.put('/api/formation/:key',auth,async(req,res)=>{let client;try{
  const key=req.params.key,value=String(req.body?.value||'').trim(),phai=normalizeClass(req.body?.phai);
