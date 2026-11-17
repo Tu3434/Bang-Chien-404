@@ -24,4 +24,5 @@ async function load(){try{const d=await api('/api/attendance');entries=d.entries
 $('#att-form').onsubmit=async e=>{e.preventDefault();const name=$('#att-name').value.trim(),phai=$('#att-class').value.normalize('NFC'),b=$('#att-submit');b.disabled=true;try{if(phai==='Huyền Cơ'){let supported=false;try{const capability=await api('/api/classes');supported=capability.classes?.includes('Huyền Cơ')}catch(_){}if(!supported)throw Error('Máy chủ Render chưa nhận bản V31.4 hỗ trợ Huyền Cơ. Hãy kiểm tra Deploy và tải lại trang.')}const d=await api('/api/attendance',{method:'POST',body:JSON.stringify({name,phai})});remember(d.id,d.secret);$('#att-name').value='';$('#att-class').value='';$('#att-class').dispatchEvent(new Event('change'));status('✓ Điểm danh thành công!');await load()}catch(err){status('⚠ '+err.message)}finally{b.disabled=false}};
 $('#att-refresh').onclick=load;$('#att-search').oninput=draw;$('#att-filter').onchange=draw;
 document.addEventListener('attendance-round-changed',load);load();
+let liveLoading=false;setInterval(async()=>{if(document.hidden||liveLoading)return;liveLoading=true;try{await load()}finally{liveLoading=false}},5000);
 })();
