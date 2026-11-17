@@ -47,6 +47,85 @@ app.delete('/api/attendance/:id',limiter,async(req,res)=>{
  }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}
  finally{if(client)client.release()}
 });
+// Discord integration V1.6: PostgreSQL is the source of truth.
+// Shared secret is server-side only; never expose DISCORD_SYNC_KEY to the browser.
+function discordAuthorized(req){
+ const configured=process.env.DISCORD_SYNC_KEY||'';
+ const supplied=String(req.get('Authorization')||'').replace(/^Bearer\s+/i,'');
+ if(configured.length<32||supplied.length!==configured.length)return false;
+ return crypto.timingSafeEqual(Buffer.from(configured),Buffer.from(supplied));
+}
+function discordGuard(req,res,next){
+ if(!discordAuthorized(req))return res.status(401).json({error:'Discord API key không hợp lệ'});
+ next();
+}
+app.get('/api/discord/active',discordGuard,async(req,res)=>{try{
+ const r=await round();res.set('Cache-Control','no-store').json({round:r||null});
+ }catch(e){sendError(res,e)}});
+app.get('/api/discord/roster',discordGuard,async(req,res)=>{try{
+ const id=Number(req.query.round_id);
+ if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'round_id không hợp lệ'});
+ const current=await round();
+ if(!current||Number(current.id)!==id)return res.status(409).json({error:'Đợt điểm danh đã đổi. Hãy liên kết sự kiện Discord với trận mới.'});
+ const r=await pool.query('SELECT character_name,class_name,created_at FROM attendance_entries WHERE round_id=$1 ORDER BY created_at,id',[id]);
+ res.set('Cache-Control','no-store').json({round:current,entries:r.rows});
+ }catch(e){sendError(res,e)}});
+app.post('/api/discord/signup',discordGuard,async(req,res)=>{
+ const userId=String(req.body?.discord_user_id||'');
+ const id=Number(req.body?.round_id);
+ const name=String(req.body?.name||'').trim().normalize('NFC');
+ const phai=normalizeClass(req.body?.phai);
+ if(!/^\d{15,22}$/.test(userId)||!Number.isSafeInteger(id)||id<1||name.length<2||name.length>50||!classes.includes(phai)||/[\x00-\x1f\x7f]/.test(name))return res.status(400).json({error:'Thông tin điểm danh không hợp lệ'});
+ let client;
+ try{
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const active=(await client.query('SELECT id FROM attendance_rounds WHERE is_active=true ORDER BY id DESC LIMIT 1')).rows[0];
+ if(!active||Number(active.id)!==id){await client.query('ROLLBACK');return res.status(409).json({error:'Trận hiện tại đã thay đổi. Cần liên kết lại bot.'});}
+ const found=await client.query('SELECT attendance_id FROM discord_attendance_links WHERE round_id=$1 AND discord_user_id=$2 FOR UPDATE',[id,userId]);
+ let entryId;
+ if(found.rowCount){
+   entryId=found.rows[0].attendance_id;
+   const updated=await client.query('UPDATE attendance_entries SET character_name=$1,class_name=$2 WHERE id=$3 AND round_id=$4 RETURNING id',[name,phai,entryId,id]);
+   if(!updated.rowCount){await client.query('DELETE FROM discord_attendance_links WHERE round_id=$1 AND discord_user_id=$2',[id,userId]);entryId=null;}
+ }
+ if(!entryId){
+   // Avoid silently taking ownership of a name registered on the website.
+   const taken=await client.query('SELECT id FROM attendance_entries WHERE round_id=$1 AND lower(btrim(character_name))=lower(btrim($2)) LIMIT 1',[id,name]);
+   if(taken.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'Tên ingame đã được đăng ký trên web hoặc Discord'});}
+   const inserted=await client.query('INSERT INTO attendance_entries(round_id,character_name,class_name,owner_hash) VALUES($1,$2,$3,$4) RETURNING id',[id,name,phai,sha(random())]);
+   entryId=inserted.rows[0].id;
+   await client.query('INSERT INTO discord_attendance_links(round_id,discord_user_id,attendance_id) VALUES($1,$2,$3)',[id,userId,entryId]);
+   await client.query('INSERT INTO attendance_registration_history(attendance_id,round_id,character_name,class_name) VALUES($1,$2,$3,$4) ON CONFLICT(attendance_id) DO NOTHING',[entryId,id,name,phai]);
+ }else{
+   await client.query('UPDATE attendance_registration_history SET character_name=$1,class_name=$2 WHERE attendance_id=$3 AND deleted_at IS NULL',[name,phai,entryId]);
+ }
+ await client.query('COMMIT');res.json({ok:true,attendance_id:entryId});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return res.status(409).json({error:'Tên ingame đã được đăng ký'});sendError(res,e)}finally{if(client)client.release()}
+});
+app.post('/api/discord/leave',discordGuard,async(req,res)=>{
+ const id=Number(req.body?.round_id),userId=String(req.body?.discord_user_id||'');
+ if(!Number.isSafeInteger(id)||id<1||!/^\d{15,22}$/.test(userId))return res.status(400).json({error:'Thông tin không hợp lệ'});
+ let client;
+ try{
+ client=await pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock($1)',[4042026]);
+ const current=(await client.query('SELECT id FROM attendance_rounds WHERE is_active=true LIMIT 1')).rows[0];
+ if(!current||Number(current.id)!==id){await client.query('ROLLBACK');return res.status(409).json({error:'Trận đang mở đã thay đổi'});}
+ const link=await client.query('DELETE FROM discord_attendance_links WHERE round_id=$1 AND discord_user_id=$2 RETURNING attendance_id',[id,userId]);
+ let removed=false;
+ if(link.rowCount){
+  const target=await client.query('DELETE FROM attendance_entries WHERE id=$1 AND round_id=$2 RETURNING character_name',[link.rows[0].attendance_id,id]);
+  if(target.rowCount){
+   removed=true;
+   await client.query('UPDATE attendance_registration_history SET deleted_at=now() WHERE attendance_id=$1',[link.rows[0].attendance_id]);
+   const name=target.rows[0].character_name;
+   const remaining=await client.query('SELECT 1 FROM attendance_entries WHERE round_id=$1 AND lower(btrim(character_name))=lower(btrim($2)) LIMIT 1',[id,name]);
+   if(!remaining.rowCount)await client.query("DELETE FROM formation_cells WHERE cell_key LIKE '%:name' AND lower(btrim(value))=lower(btrim($1))",[name]);
+  }
+ }
+ await client.query('COMMIT');res.json({ok:true,removed});
+ }catch(e){if(client)await client.query('ROLLBACK').catch(()=>{});sendError(res,e)}finally{if(client)client.release()}
+});
+
 // V31.5 — Admin-controlled formation section headings, stored independently of match data.
 const defaultFormationHeadings={1:'ĐOÀN 1 · Trụ',2:'ĐOÀN 2 · Def (Mid)',3:'ĐOÀN 3 · Def (Mid)'};
 app.get('/api/formation/headings',async(req,res)=>{try{

@@ -18,3 +18,11 @@ CREATE TABLE IF NOT EXISTS attendance_registration_history (
 INSERT INTO attendance_registration_history(attendance_id,round_id,character_name,class_name,registered_at)
 SELECT e.id,e.round_id,e.character_name,e.class_name,e.created_at FROM attendance_entries e
 ON CONFLICT(attendance_id) DO NOTHING;
+
+-- V1.6: link a Discord account to one registration within one round.
+CREATE TABLE IF NOT EXISTS discord_attendance_links (
+ round_id BIGINT NOT NULL REFERENCES attendance_rounds(id) ON DELETE CASCADE,
+ discord_user_id TEXT NOT NULL,
+ attendance_id BIGINT NOT NULL UNIQUE REFERENCES attendance_entries(id) ON DELETE CASCADE,
+ PRIMARY KEY(round_id,discord_user_id)
+);
